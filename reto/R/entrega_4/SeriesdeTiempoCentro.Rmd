@@ -1,0 +1,104 @@
+---
+title: "RetoVol5"
+author: "Angel Azahel Ramírez Cabello"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+data <- read.csv("Reto/classif/CENTRO_2020_2023_grouped.csv")
+head(data)
+#Checar si hay valores nulos
+sum(is.na(data$PM2.5))
+#Time series
+plot(data$PM2.5,type="l")
+
+
+```
+```{r}
+ResultFINAL <-data.frame(colnames( c("MSE1", "MSE2", "MSE3", "MSE4", "DIF1", "DIF2", "DIF3", "DIF4", "accuracy", "cme", "epam","DF")))
+```
+
+
+```{r}
+library(urca)
+#Ciclo for
+for (i in 1:178){
+  inicio=1+168*i+1
+  final=inicio+168
+  ventas=data[inicio:final,]
+  x= ts(ventas$PM2.5, frequency = 12, start(c(1,1)))
+  #plot.ts(x, col = "red", main="Ventas de televisores")
+  T = decompose(x,type = c("multiplicative"))
+  ventas_desestacionalizadas = (T$x)/(T$seasonal)
+  x3 = 1:169
+  y3 = x#ventas_desestacionalizadas
+  N3 = lm(y3~x3)
+  
+  df = ur.df(x, type = "none", lags = 0)
+  valorp=pf(df@testreg$fstatistic[1], df@testreg$fstatistic[2], df@testreg$fstatistic[3], lower.tail = FALSE)
+  #Condición para saber si valor p es menor a 0.05
+  valorp <- ifelse(valorp <= 0.05, 1, 0)
+  # Extract relevant data
+  ventas2 <- data[inicio:(final+168),]
+  x2 <- ts(ventas2$PM2.5, frequency = 12, start = c(1, 1))
+  
+  # Predictions using N3
+  y4 <- predict(N3, data.frame(x3 = 170:193))
+  y5 <- predict(N3, data.frame(x3 = 194:217))
+  y6 <- predict(N3, data.frame(x3 = 218:241))
+  y7 <- predict(N3, data.frame(x3=  242:265))
+  yr4 <- x2[1:265]
+  
+    # Plotting
+  plot(x3, y3, type = "b", xlim = c(1, 265), ylim = c(5, 50), xlab = "Observation", ylab = "PM2.5 Levels", main = "PREDICCION CONCENTRACION PM2.5")
+  points(170:265, yr4[170:265], col = "red", pch = 16, cex = 0.8, lwd = 2, xlab = "Observation", ylab = "PM2.5 Levels", main = "ARIMA Model Prediction")
+  points(182:217, c(y5, y6, y7), col = c("blue", "orange", "purple"), pch = 16, cex = 1.2)
+  points(170:193, y4, col = "green", pch = 16, cex = 0.8)
+  points(194:217, y5, col = "blue", pch = 16, cex = 0.8)
+  points(218:241, y6, col = "orange", pch = 16, cex = 0.8)
+  points(242:265, y7, col = "brown", pch = 16, cex = 0.8)
+  abline(N3, col = "purple", lwd = 2)
+  legend("topleft", legend = c("Observado", "Regresión lineal", "Próximos 4 días"), col = c("black", "purple", "red"), pch = c(16, 16, 16))
+
+  #Datos
+  # Guardar en una lista el MSE de las predicciones
+  MSE <- c(mean((yr4[170:193] - y4)^2),mean((yr4[194:217] - y5)^2), mean((yr4[218:241] - y6)^2), mean((yr4[242:265] - y7)^2))
+  # Guardar en otra lista la diferencia absoluta  de medias entre predicciones y observaciones
+  DIF <- c(abs(mean(yr4[170:193]) - mean(y4)), abs(mean(yr4[194:217]) - mean(y5)),abs(mean(yr4[218:241]) - mean(y6)),abs(mean(yr4[242:265]) - mean(y7)))
+  # Guardar en una lista si el promedio de cada observación es mayor a 30
+  PROM <- c(mean(yr4[170:193]) > 33,mean(yr4[194:217]) > 33, mean(yr4[218:241]) > 33, mean(yr4[242:265]) > 33)
+  PROM <- ifelse(PROM == TRUE, 1, 0)
+  # Guardar en una lista si el promedio de cada predicción es mayor a 30
+  PROM2 <- c(mean(y4) > 33, mean( y5)> 33,mean(y6) > 33, mean( y7)>33)
+  PROM2 <- ifelse(PROM2 == TRUE, 1, 0)
+  # Calcular las veces que PROM2 predice correctamente a PROM
+  accuracy=sum(PROM == PROM2)/length(PROM)
+  
+  predicciones <- predict(N3, newdata = data.frame(tiempo = x3))
+  cme <- mean((x - predicciones)^2)
+  epam <- mean(abs(x - predicciones)/x)
+  
+  #Lista para guardar los resultados
+  resultados <- list(MSE = MSE, DIF = DIF, PROM = PROM, PROM2 = PROM2, accuracy = accuracy, cme = cme, epam = epam, valorP=valorp)# Guardar todos los 
+  Res <- data.frame(MSE1 = resultados$MSE[1], MSE2 = resultados$MSE[2],MSE3 = resultados$MSE[3],MSE4 = resultados$MSE[4] , DIF1= resultados$DIF[1],DIF2= resultados$DIF[2], DIF3= resultados$DIF[3],DIF4= resultados$DIF[4], accuracy = resultados$accuracy, cme = resultados$cme, epam = resultados$epam, DF = resultados$valorP)
+  ResultFINAL<- rbind(ResultFINAL, c(Res))
+}
+```
+
+```{r}
+ResultFINAL
+```
+
+```{r}
+colMeans(ResultFINAL)
+```
+
+
+```{r}
+table(ResultFINAL$DF)
+```
+
+
+
+

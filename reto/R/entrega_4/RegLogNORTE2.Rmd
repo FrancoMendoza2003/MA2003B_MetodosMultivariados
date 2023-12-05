@@ -1,0 +1,178 @@
+---
+title: "RegLogNORTE2"
+author: "EQUIPO 5"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(vcd)
+library(lmtest)
+library(car)
+library(MKclass)
+library(caret)
+library(psych)
+library(polycor)
+library(ggcorrplot)
+```
+
+```{r}
+# Define the file path
+file_path <- "D:/MA2003B_Metodos_Multivariados/reto/datos/08_december_datasets/NORTE2_2020_2023.csv"
+
+# Load the CSV file
+data <- read.csv(file_path)
+data$date <- as.Date(data$date, format = "%Y-%m-%d")
+# Check the summary and the first few rows of the data
+head(data)
+```
+
+
+```{r}
+p_values = vector()
+
+predictor_names <- names(data)[names(data) != "Class"]
+
+for (variable in predictor_names) {
+  formula <- as.formula(paste("Class ~", variable))
+  
+  model <- glm(formula, family = "binomial", data = data)
+  
+  p_value <- summary(model)$coefficients[, "Pr(>|z|)"][2] 
+  p_values <- c(p_values, p_value)
+}
+resultados <- list(Variable = predictor_names, Valor_P = p_values)
+
+
+resultados_df <- data.frame(Variable = resultados$Variable, Valor_P = resultados$Valor_P)
+
+resultados_ordenados <- resultados_df[order(resultados_df$Valor_P), ]
+
+print(resultados_ordenados)
+
+
+```
+
+
+# 1. Divida el conjunto de datos en un conjunto de: 60/40 (entrenamiento/prueba).
+```{r}
+set.seed(6)
+n = nrow(data)
+train_indices <- sample(1:n,round(n * 0.6))
+train <- data[train_indices, ]
+test = data[-train_indices, ]
+```
+
+# 2.  Formule un modelo de regresión logística con el cual predecir el rendimiento actual del índice bursátil.
+
+Mediante el uso de la función glm(modelo lineal) ajustamos el modelo de regresión logística para nuestra base de entrenamiento.
+```{r}
+#Ajuste del modelo
+model =glm(Class~ PM10+RH+NO2, family="binomial", data=train)
+
+#para la notación científica en el resumen
+options(scipen=999)
+
+#resumen del modelo
+summary(model)
+
+```
+
+
+# 5. Represente gráficamente el modelo, grafique la curva de regresión logarítmica.
+
+## Predicciones de probabilidades 
+
+```{r}
+prob_test=predict(model, test, type="response")
+
+p_opt=optCutoff(prob_test, truth=test$Class, namePos = 1)[1]
+p_opt
+predicted.classes=ifelse(prob_test > p_opt, 1, 0)
+head(predicted.classes)
+
+```
+
+# 6. Evalúe el modelo.
+```{r}
+anova(model)
+```
+
+```{r}
+library(caret)
+
+conf.table=table(pred=predicted.classes, true=test$Class)
+conf.table
+confusion =confusionMatrix(as.factor(predicted.classes), as.factor(test$Class),positive="1")
+confusion
+```
+
+
+```{r}
+mosaic(confusion$table,main="Matriz de confusion")
+```
+
+Aquí podemos ver un mosaico de la matriz de confusión, y se puede remarcar que la mayor parte de las predicciones son de que va a ir en una dirección para arriba.
+
+# 7. Valide los supuestos del modelo
+
+## Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+### Prueba
+```{r}
+dwtest(model)
+```
+
+```{r}
+plot(data$NO2)
+```
+
+
+## VIF
+```{r}
+vif(model)
+```
+
+## Tamaño muestral
+
+```{r}
+table(test$Class)
+```
+
+## Box- Tidwell
+
+### RH
+```{r}
+logodds=model$linear.predictors
+boxTidwell(logodds~RH,data=train)
+```
+
+### PM10
+```{r}
+boxTidwell(logodds~PM10,data=train)
+```
+
+### NO2
+```{r}
+boxTidwell(logodds~NO2,data=train)
+```
+
+# 8. Corrplot
+```{r}
+dataselect <- data[c("RH","NO2","PM10","PM2.5")]
+mat_cor <- hetcor(dataselect)$correlations #matriz de correlación policórica
+ggcorrplot(mat_cor,type="lower",hc.order = T)
+```
+
+

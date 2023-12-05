@@ -1,0 +1,61 @@
+---
+title: "02_transformacion"
+author: "Luis Angel López Chávez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(MVN)
+```
+
+## Lectura de Datos
+
+```{r}
+# df_norte2 = read.csv("../../datos/cleaned_datasets/NORTE2_2020_2023.csv")
+# df_noroeste2 = read.csv("../../datos/cleaned_datasets/NOROESTE2_2020_2023.csv")
+# df_sureste3 = read.csv("../../datos/cleaned_datasets/SURESTE3_2020_2023.csv")
+
+df_centro = read.csv("../../datos/cleaned_datasets/CENTRO_2020_2023.csv")
+# df_noreste = read.csv("../../datos/cleaned_datasets/NORESTE_2020_2023.csv")
+# df_noreste2 = read.csv("../../datos/cleaned_datasets/NORESTE2_2020_2023.csv")
+# df_norte = read.csv("../../datos/cleaned_datasets/NORTE_2020_2023.csv")
+# df_noroeste = read.csv("../../datos/cleaned_datasets/NOROESTE_2020_2023.csv")
+# df_sureste = read.csv("../../datos/cleaned_datasets/SURESTE_2020_2023.csv")
+# df_sureste2 = read.csv("../../datos/cleaned_datasets/SURESTE2_2020_2023.csv")
+# df_suroeste = read.csv("../../datos/cleaned_datasets/SUROESTE_2020_2023.csv")
+# df_suroeste2 = read.csv("../../datos/cleaned_datasets/SUROESTE2_2020_2023.csv")
+# df_sur = read.csv("../../datos/cleaned_datasets/SUR_2020_2023.csv")
+
+# df_norte2$date = parse_datetime(df_norte2$date,format = "%Y-%m-%d %H:%M:%S")
+# df_noroeste2$date = parse_datetime(df_noroeste2$date,format = "%Y-%m-%d %H:%M:%S")
+# df_sureste3$date = parse_datetime(df_sureste3$date,format = "%Y-%m-%d %H:%M:%S")
+
+df_centro$date = parse_datetime(df_centro$date,format = "%Y-%m-%d %H:%M:%S")
+# df_noreste$date = parse_datetime(df_noreste$date,format = "%Y-%m-%d %H:%M:%S")
+# df_noreste2$date = parse_datetime(df_noreste2$date,format = "%Y-%m-%d %H:%M:%S")
+# df_noroeste$date = parse_datetime(df_noroeste$date,format = "%Y-%m-%d %H:%M:%S")
+# df_norte$date = parse_datetime(df_norte$date,format = "%Y-%m-%d %H:%M:%S")
+# df_sureste$date = parse_datetime(df_sureste$date,format = "%Y-%m-%d %H:%M:%S")
+# df_sureste2$date = parse_datetime(df_sureste2$date,format = "%Y-%m-%d %H:%M:%S")
+# df_suroeste$date = parse_datetime(df_suroeste$date,format = "%Y-%m-%d %H:%M:%S")
+# df_suroeste2$date = parse_datetime(df_suroeste2$date,format = "%Y-%m-%d %H:%M:%S")
+# df_sur$date = parse_datetime(df_sur$date,format = "%Y-%m-%d %H:%M:%S")
+
+head(df_centro)
+```
+
+## Prueba de Normalidad
+
+
+
+```{r}
+mvn(df_centro[,c()], mvnTest ="mardia")
+```
+
+

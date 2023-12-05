@@ -1,0 +1,49 @@
+---
+title: "Pruebas Reto 1"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r,echo=FALSE}
+library(lmtest)
+library(e1071)
+library(MASS)
+library(nortest)
+library(VGAM)
+library(tseries)
+library(outliers)
+```
+
+
+```{r,echo = FALSE}
+# Set the working directory
+setwd("D:/Users/Franco Mendoza/Desktop/Ingeniería/Multivariados/Reto/MA2003B_Metodos_Multivariados/reto/datos/processed_datasets")
+
+# List all CSV files in the directory
+files <- list.files(pattern = "\\.csv$", full.names = TRUE)
+
+# Create an empty list to store data frames
+df <- list()
+
+# Read each CSV file and store it in the list
+for (i in 1:length(files)) {
+  df[[i]] <- read.csv(files[i])
+}
+
+```
+
+```{r}
+norte2 <- df[[1]]
+sur <- df[[2]]
+sureste <- df[[3]]
+```
+
+
+
+
