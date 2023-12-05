@@ -1,0 +1,186 @@
+---
+title: "Actividad 2.3 Regresión lineal Múltiple"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(plot3D)
+library(lmtest)
+```
+
+# 1. Análisis Exploratorio
+```{r,echo = FALSE}
+df = read.csv(file="datosRes.csv")
+y = df$Resistencia
+x1 = df$Longitud
+x2= df$Altura.matriz
+head(df,3)
+```
+
+## Gráficos de dispersión entre variables
+```{r}
+pairs(df, main = "Grafico de Dispersión entre variables",pch=16,col="red")
+```
+
+## Matriz de correlación de los datos
+```{r}
+cor(df)
+```
+
+Podemos ver que la variable con mayor correlación a la variable a predecir (Resistencia) es la de Longitud, debido a esto la usaremos para nuestro modelo, y para no hacer uso de variables colineales, usaremos otra variable la cuál no tenfa una alta correlación a Longitud, escogiendo 2 variables diferentes para poder evaluar y crear un buen modelo, por esto escogeremos la variable Altura.matriz como nuestra segunda variable predictora.
+
+```{r, echo = FALSE}
+df2 = subset(df,select = c(Resistencia,Longitud))
+df3 = subset(df,select=c(Altura.poste,Altura.amarre))
+x = subset(df,select = c(Longitud,Altura.matriz))
+y= subset(df,select=Resistencia)
+```
+
+## Boxplots
+```{r, echo = FALSE}
+boxplot(df2,col = c("red","purple"),main = "Boxplot de Resistencia y Longitud")
+boxplot(df3,col = c("orange","green"),main = "Boxplot de Altura.poste y Altura.amarre")
+boxplot(df$Altura.matriz,xlab="Altura.matriz",col = "blue",main = "Boxplot de Altura.matriz")
+```
+
+
+# 2. Método de mínimos cuadrados
+
+Se va a predecir la variable dependiente de Resistencia, y para las variables independientes se usarán Longitud y Altura.matriz, esto debido a la alta correlación entre Resistencia y Longitud, y la falta de colinealidad entre Altura.matriz y Longitud, por lo que se podría hacer un buen modelo.
+
+## Betas
+```{r}
+X = cbind(1,as.matrix(x))
+Y = as.matrix(y)
+betas = solve((t(X)%*%X))%*%t(X)%*%as.matrix(Y)
+betas
+```
+
+### Ecuación del modelo de regresión múltiple
+
+$Y = 2.2638+2.7443x_1+0.0125x_2$
+
+# 3. Regresión lineal múltiple en R
+```{r}
+model =lm(Y~x1+x2)
+model
+```
+
+```{r}
+scatter3D(x1,x2,Y, col="blue", cex = 0.9 , pch=19, xlab = "Longitud" ,ylab= "Altura.matriz" ,zlab="Resistencia",phi=0, theta=20)
+```
+
+Se puede ver que la fórmula del método de mínimos cuadrados nos da el mismo resultado que la función lm que nos proporciona R, y podemos ver como actúa el modelo y como se evalúa la resistencia a partir de las 2 variables predictoras en la gráfica anterior.
+
+# 4. Evaluación del modelo
+
+Nivel de Significancia: $\alpha = 0.05$
+
+## Colinealidad de las variables involucradas
+
+$H_0: \rho = 0$
+
+$H_1: \rho \neq 0$
+
+```{r}
+cor.test(df$Longitud,df$Altura.matriz)
+```
+
+Debido a que el pvalue sobrepasa al nivel de significancia de 0.05 establecido anteriormente, no se rechaza la hipótesis nula de la colinealidad, y se concluye que no hay colinealidad entre las variables involucradas en el modelo.
+
+## Variabilidad explicada por el modelo
+```{r}
+summary(model)
+```
+
+Esta función nos muestra un coeficiente de determinación alto de 0.9794, lo que nos dice que las variables usadas $x_1$ y $x_2$ explican al 97.94% la varaibilidad de nuestra variable dependiente $y$, la resistencia, lo cuál nos dice que el modelo realizado es bueno.
+
+## Significancia de beta_i
+
+Todos los valores p de las $\beta_i$ son menores al $\alpha$ de 0.05, por lo que se concluye que todos las betas son significantes, esto es bueno para nuestro modelo, ya que sabemos que las 2 variables son buenas para nuestro modelo, y se alejan lo suficiente del 0 para influir en él.
+
+## Economía del modelo y variabilidad explicada
+
+Debido a que no se usan muchas variables, solo 2, podemos concluir que la economía del modelo es buena, la diferencia del $r^2$ con mas variables no supera por mucho la de este modelo por lo que no es necesario agregarlas.
+
+# 5. Validación del modelo
+
+## Normalidad de los residuos
+
+$H_0:$ Los residuos provienen de una distribución normal.
+
+$H_1:$ Los residuos no provienen de una distribución normal.
+
+```{r}
+shapiro.test(residuals(model))
+```
+
+```{r}
+qqnorm(model$residuals,main = "Q-Q Plot",xlab = "Cuantiles Teóricos",ylab= "Cuántiles de los datos")
+qqline(model$residuals)
+```
+
+```{r}
+hist(model$residuals,main = "Histograma de los residuos del modelo",xlab = "Residuos",ylab = "Frecuencia",col = c("red","purple","blue","orange","green"))
+```
+
+Viendo que el pvalue de la prueba de Shapiro es de 0.381, y siendo mayor que el $\alpha$ de 0.05, no podemos rechazar la hipótesis nula, y se concluye que se presenta una distribución normal en los resiudos del modelo.
+
+## Verificación de media cero
+
+$H_0:$ Media $= 0$.
+
+$H_1:$ Media $\neq 0$.
+
+```{r}
+t.test(residuals(model))
+```
+
+Debido a el pvalue de 1, no podemos rechazar la hipótesis nula, y concluimos que la media de los residuos si puede ser igual a 0.
+
+## Homocedasticidad
+
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(model)
+```
+
+```{r}
+plot(residuals(model),main = "Residuos del modelo", xlab = "Observación",ylab= "Residuos")
+abline(h=0,col="red",lwd=2)
+```
+
+Debido a que el pvalue es muy alto, con un valor de 0.7163, no se puede rechazar la hipótesis nula, y se concluye que la varianza de los errores es constante, esto se puede ver en la gráfica superior.
+
+## Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+dwtest(model)
+```
+
+Debido a que el p value es alto, con un valor de 0.559, y mayor de 0.05, no hay suficiente evidencia para rechazar la hipótesis nula, por lo que se concluye que los residuos son independientes.
+
+# 6. Conclusiones
+
+En el análisis del modelo se pudieron ver resultados positivos en cuanto a sus supuestos, ya que quedaron satisfechos todos estos. En el trabajo se pudo hacer un análisis detallado de la regresión lineal múltiple usando las variables de Longitud y Altura.matriz.
+
+El modelo de regresión lineal múltiple es sólido, ya que se ajusta bien a los datos y cumple con los supuestos fundamentales de la regresión lineal, lo que lo hace confiable para predecir la resistencia basada en las variables Longitud y Altura.matriz.
+
+
+
+
+

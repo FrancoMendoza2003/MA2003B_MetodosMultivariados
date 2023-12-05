@@ -1,0 +1,161 @@
+---
+title: "Actividad 1.5 Combinaciones lineales y Validación de la Normal Multivariada"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# 1. Matriz X
+```{r}
+X = matrix(c(1,4,3,6,2,6,8,3,3),nrow=3,ncol=3,byrow=TRUE)
+X
+```
+
+$b 'X = X_1 + X_2 + X_3$
+
+$c 'X = X_1 +2X_2-3X_3$ 
+
+## a) Hallar la media, varianza y covarianza de X
+```{r,echo=FALSE}
+mediaX=as.matrix(colMeans(X))
+varianzaX= var(X)
+covarianzaX = cov(X)
+cat("Media de X:",mediaX)
+cat("\n\nVarianza de X:\n")
+varianzaX
+cat("\n\nCovarianza de X:\n")
+covarianzaX
+```
+
+## b) Hallar la media, varianza y covarianza de b'X y c'X
+
+### Media
+```{r}
+bc = matrix(c(1,1,1,1,2,-3),nrow=2,ncol=3,byrow=TRUE)
+mediabc = bc%*%mediaX
+mediabc
+```
+
+### Matriz de Varianzas y covarianzas
+```{r}
+varianzabc = bc%*%varianzaX%*%t(bc)
+varianzabc
+```
+
+## c) Hallar el determinante de S
+```{r, echo = FALSE}
+DS=det(varianzaX)
+cat("c) Determinante de S (matriz de var-covarianzas de X): ", DS)
+```
+
+## d) Hallar los valores y vectores propios de S
+```{r, echo = FALSE}
+cat("d) Valores propios de S: \n", eigen(varianzaX)$values)
+cat("\n\nd) Vectores propios de S: \n\n")
+eigen(varianzaX)$vectors
+```
+
+## e) Argumentar si hay independencia entre b'X y c'X , ¿y qué ocurre con X1, X2 y X3? ¿son independientes?
+```{r}
+bx = matrix(c(1,1,1),nrow=1,ncol=3)
+cx=matrix(c(1,2,-3),nrow=1,ncol=3)
+cor.test(X[,1],X[,2])
+cor.test(X[,1],X[,3])
+cor.test(X[,2],X[,3])
+```
+
+$H_0:$ Correlación = 0
+
+$H_1:$ Correlación $\neq0$
+
+Debido a que los p valores de todas las combinaciones de columnas en la matriz X son mayor a el nivel de significancia de 0.05, no podemos rechazar la hipótesis nula, por lo que se concluye que la correlación entre las variables es = 0. Como la matriz original es independiente, se sabe que todas las combinaciones serán independientes.
+
+## Hallar la varianza generalizada de S. Explicar el comportamiento de los datos de X basándose en los la varianza generalizada, en los valores y vectores propios de S. 
+
+```{r,echo=FALSE}
+cat("La varianza generalizada de S es:", sum(eigen(varianzaX)$values))
+```
+
+# 2.  Explore los resultados del siguiente código y dé una interpretación.
+
+```{r}
+library(MVN)
+x = rnorm(100, 10, 2)
+y = rnorm(100, 10, 2)
+datos = data.frame(x,y)
+mvn(datos, mvnTest = "hz", multivariatePlot = "persp")
+mvn(datos, mvnTest = "hz", multivariatePlot = "contour")
+```
+
+## Henze-Zirkler
+
+$H_0$ : Los datos siguen una distribución normal multivariada.
+
+$H_1$ : Los datos no siguen una distribución normal multivariada.
+
+Debido a el alto valor p de los tests de Henze Zirkler, con un valor de 0.6316, no podemos rechazar la hipótesis nula, y se concluye qye los datos usados tienen una distribución normal multivariada.
+
+## Anderson-Darling
+
+$H_0$ : Los datos siguen una distribución normal univariada.
+
+$H_1$ : Los datos no siguen una distribución normal univariada.
+
+Viendo que los pvalue de la prueba de Anderson-Darling es de 0.5405 en la primer variable, y 0.9752 en la segunda variable, y siendo que son mayores que el $\alpha$ de 0.05, no podemos rechazar la hipótesis nula, y se concluye que se presenta una distribución normal univariada en las 2 variables de los datos.
+
+# 3. Un periódico matutino enumera los siguientes precios de autos usados para un compacto extranjero con edad medida en años y precio en venta medido en miles de dólares. 
+
+## a) Diagrama de dispersión
+```{r}
+x1 =c(1, 2, 3, 3, 4, 5, 6, 8, 9, 11)
+x2=c(18.95, 19.00, 17.95, 15.54, 14.00, 12.95, 8.94, 7.49, 6.00, 3.99)
+plot(x1,x2,col="purple",main="Diagrama de dispersión x1 y x2",xlab = "Edad (años)",ylab = "Precio en venta (Dólares)")
+```
+
+## b)Inferir el signo de la covarianza a partir del gráfico
+Viendo la gráfica se puede inferir que el signo de la covarianza muestral es negativo, esto porque las variables son inversamente proporcional entre ellas.
+
+## c) Calcular el cuadrado de las distancias de Mahalanobis 
+```{r}
+mx = cbind(x1,x2)
+meanx = colMeans(mx)
+varx=var(mx)
+M = mahalanobis(mx,meanx,varx)
+M
+```
+
+## d) Usando las anteriores distancias, determine la proporción de las observaciones que caen dentro del contorno de probabilidad estimado del 50% de una distribución normal bivariada. 
+```{r,echo =FALSE}
+chi = qchisq(0.5,df=2)
+dentro = sum(M<=chi)
+pro = dentro/nrow(mx)
+cat("Proporción de datos:",pro)
+```
+
+## e) Ordene el cuadrado de las distancias del inciso c y construya un diagrama chi-cuadrado
+```{r,echo = FALSE}
+Mord = sort(M)
+x = seq(1,length(M))
+plot(x,Mord,type = "b",main="Diagrama chi-cuadrado",xlab="Observaciones",ylab="Cuadrado de las distancias")
+
+```
+
+## f) Dados los resultados anteriores, serían argumentos para decir que son aproximadamente normales bivariados?
+
+Sí, acorde a como se distribuyen los datos, y como se ve la recta se puede creer que son aproximadamente normales bivariadas, aunque no siempre es seguro. Para asegurar esto, se tiene que hacer una prueba de shapiro:
+
+```{r}
+shapiro.test(mx)
+shapiro.test(M)
+```
+
+$H_0$ : Los datos siguen una distribución normal.
+
+$H_1$ : Los datos no siguen una distribución normal.
+
+Con como se ven estas pruebas, y debido a que ambas pruebas nos dan valores de p mayores que 0.05, no se tiene suficiente evidencia para rechazar la hipótesis nula, y se concluye que los datos se distribuyen de forma normal, al igual que las distancias cuadradas.

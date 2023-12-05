@@ -1,0 +1,234 @@
+---
+title: "Actividad 1.6 Componentes principales"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo =FALSE}
+library(stats)
+```
+
+# Parte 1
+
+```{r}
+# Cargar datos
+datos <- read.csv("paises_mundo.csv")
+
+# Seleccionar las variables de interés
+variables <- datos[, c("CrecPobl", "MortInf", "PorcMujeres", "PNB95", "ProdElec", 
+                        "LinTelf", "ConsAgua", "PropBosq", "PropDefor", "ConsEner", "EmisCO2")]
+head(variables,5)
+```
+
+## Matriz de varianzas-covarianzas
+```{r}
+S <- cov(variables)
+S
+```
+
+## Análisis de componentes principales para la matriz de varianzas-covarianzas
+
+### Valores y vectores propios
+```{r}
+eigen_S <- eigen(S)
+eigen_S
+```
+
+### Proporción de varianza explicada por cada componente
+```{r}
+prop_var_S <- eigen_S$values / sum(diag(S))
+prop_var_S
+```
+
+### Varianza acumulada
+```{r}
+var_acum_S <- cumsum(prop_var_S)
+var_acum_S
+```
+
+En este caso los componentes mas importantes son los primeros 2, ya que el primero explica el 90.3% de la varianza acumulada, y el segundo explica aproximadamente el 9.6%, en este caso el mas significativo es el primero ya que explica la gran mayoria de la varianza en los datos.
+
+### Coeficientes de las combinaciones lineales de CP1 y CP2 para la matriz de varianzas-covarianzas
+```{r,echo=FALSE}
+coef_CP1_S <- eigen_S$vectors[, 1]
+coef_CP2_S <- eigen_S$vectors[, 2]
+
+cat("\nCoeficientes de las combinaciones lineales de CP1 y CP2 para la matriz de varianzas-covarianzas:\n")
+print(coef_CP1_S)
+print(coef_CP2_S)
+```
+
+En este caso, la ecuación de la combinación lineal de los Componentes Principales (CP1 y CP2) para la matriz de varianzas-covarianzas sería:
+
+\[ CP1 = -1.6582 \times 10^{-6}  X1 - 4.0481 \times 10^{-5}  X2 + 5.7391 \times 10^{-6}  X3 + 8.8804  X4 + 0.4598  X5 + 0.0004  X6 + 0.0003  X7 + 4.0896 \times 10^{-6}  X8 - 1.0738 \times 10^{-6}  X9 + 0.0025  X10 + 4.6437 \times 10^{-6}  X11 \]
+
+\[ CP2 = 4.7068 \times 10^{-7}  X1 - 1.7743 \times 10^{-5}  X2 - 1.0845 \times 10^{-5}  X3 + 0.4598  X4 - 0.8880  X5 + 0.0004  X6 - 0.0011  X7 + 7.7908 \times 10^{-6}  X8 + 2.3508 \times 10^{-7}  X9 + 0.0007  X10 - 1.3157 \times 10^{-6}  X11 \]
+
+
+Para CP1:
+- La variable \(X4\) (PNB95) tiene el mayor coeficiente positivo (8.8804), por lo que contribuye significativamente al aumento de CP1.
+- La variable \(X5\) (ProdElec) también tiene un coeficiente positivo alto (0.4598).
+- Otras variables como \(X10\) (ConsEner) y \(X6\) (LinTelf) también contribuyen positivamente, pero menos que las otras. 
+
+Para CP2:
+- La variable \(X5\) (ProdElec) tiene el mayor coeficiente negativo (-0.8880), por lo que contribuye significativamente a la disminución de CP2.
+- La variable \(X4\) (PNB95) también tiene un coeficiente alto (0.4598).
+- Otras variables como \(X7\) (ConsAgua) y \(X10\) (ConsEner) también contribuyen negativamente, pero menos que las otras.
+
+## Matriz de correlaciones
+```{r}
+R <- cor(variables)
+R
+```
+
+## Análisis de componentes principales para la matriz de correlaciones
+
+### Valores y vectores propios
+```{r}
+eigen_R <- eigen(R)
+eigen_R
+```
+
+### Proporción de varianza explicada por cada componente
+```{r}
+prop_var_R <- eigen_R$values / sum(diag(R))
+prop_var_R
+```
+
+### Varianza acumulada
+```{r}
+var_acum_R <- cumsum(prop_var_R)
+var_acum_R
+```
+
+Con estos resultados obtenidos, podemos ver que los primeros 2 componentes son los mas significativos, esto porque explican una proporción considerable de la varianza acumulada, ya que acumulan el 54.18% de la varianza, con porcentajes de 36.64 y 17.75 respectivamente.
+
+### Coeficientes de las combinaciones lineales de CP1 y CP2 para la matriz de correlaciones
+```{r,echo=FALSE}
+coef_CP1_R <- eigen_R$vectors[, 1]
+coef_CP2_R <- eigen_R$vectors[, 2]
+
+cat("\nCoeficientes de las combinaciones lineales de CP1 y CP2 para la matriz de correlaciones:\n")
+print(coef_CP1_R)
+print(coef_CP2_R)
+
+```
+La ecuación de la combinación lineal de los Componentes Principales (CP1 y CP2) se puede expresar asi:
+
+\[ CP1 = -0.3141  X1 - 0.3924  X2 + 0.1165  X3 + 0.2954  X4 + 0.2590  X5 + 0.4461  X6 + 0.0924  X7 + 0.0057  X8 - 0.2437  X9 + 0.4150  X10 + 0.3745  X11 \]
+
+\[ CP2 = 0.3484  X1 - 0.0414  X2 - 0.5828  X3 - 0.1769  X4 - 0.1736  X5 - 0.0272  X6 + 0.3206  X7 - 0.4574  X8 - 0.1541  X9 + 0.2329  X10 + 0.2917  X11 \]
+
+
+Para CP1:
+- La variable \(X6\) (LinTelf) tiene el mayor coeficiente positivo (0.4461), por lo que contribuye significativamente al aumento de CP1.
+- La variable \(X4\) (PNB95) también tiene un coeficiente positivo alto (0.2954).
+- Otras variables como \(X5\) (ProdElec) y \(X10\) (ConsEner) también contribuyen positivamente, pero menos que las otras.
+
+Para CP2:
+- La variable \(X3\) (PorcMujeres) tiene el mayor coeficiente negativo (-0.5828), por lo que contribuye significativamente a la disminución de CP2.
+- La variable \(X8\) (PropBosq) también tiene un alto coeficiente negativo (-0.4574).
+- Otras variables como \(X1\) (CrecPobl) y \(X7\) (ConsAgua) también contribuyen negativamente, pero menos que las otras.
+
+# Parte 2
+
+## Obtener las dos primeras componentes principales con la matriz de varianzas-covarianzas
+```{r}
+cpS <- princomp(variables, cor = FALSE)
+cpS
+```
+
+### Calcular las puntuaciones (scores) de las observaciones para los componentes obtenidos con la matriz de varianzas-covarianzas
+```{r}
+cpaS <- as.matrix(variables) %*% cpS$loadings
+```
+
+## Graficar las dos primeras componentes con la matriz de varianzas-covarianzas
+```{r}
+plot(cpaS[, 1:2], type = "p", main = "Gráfica de Componentes Principales (S)")
+text(cpaS[, 1], cpaS[, 2], 1:nrow(cpaS))
+biplot(cpS)
+```
+
+En la primera gráfica de componentes principales, se puede observar que los datos en general se encuentran mayormente en un rango de valores cercano a 0 en ambos componentes. En el primer componente, se aprecia que los valores son principalmente negativos y ceros, llegando a valores muy grandes. A diferencia del primer componente, en el segundo se puede ver que también alcanza valores muy grandes, pero en este caso, puede tener valores positivos.
+
+
+En el segundo gráfico se aprecia que las variables que más afectan a los componentes son ProdElec y PNB95, siendo el primero influyente en ambos de manera similar, mientras que el segundo afecta más al componente 1. También se pueden identificar algunos datos atípicos que se separan del resto, como las observaciones 37, 75 y 25. Además, se puede notar que las observaciones 16 y 14 se distancian significativamente, aunque no tanto como las mencionadas anteriormente.
+
+### Resumen de las componentes principales obtenidas con la matriz de varianzas-covarianzas
+```{r}
+summary(cpS)
+```
+
+
+## Calcular las puntuaciones (scores) de las observaciones para los componentes obtenidos con la matriz de correlaciones
+```{r}
+cpR <- princomp(variables, cor = TRUE)
+cpaR <- as.matrix(scale(variables)) %*% cpR$loadings
+cpR
+```
+
+## Graficar las dos primeras componentes con la matriz de correlaciones
+```{r}
+plot(cpaR[, 1:2], type = "p", main = "Gráfica de Componentes Principales (R)")
+
+text(cpaR[, 1], cpaR[, 2], 1:nrow(cpaR))
+
+biplot(cpR)
+```
+
+En el análisis de la matriz de correlación, podemos ver una gran variabilidad en los datos comparado con la matriz de varianzas, en la primer gráfica de componentes principales, aunque se puede ver una tendencia a los datos en estar positivo y cercano a el valor de 2 en el primer componente, y negativo o cercano a 0 en e segundo componente.
+
+
+En la segunda gráfica podemos ver que todas las variables tienen una influencia bastante parecida en los 2 componentes, aunque se ve un poco mayor la variable de MortInf al primer componente, y la variable de PorcMujeres en el segundo componente. Los datos atípicos que se pueden ver a simple vista en este gráfico son el 31, 3 y 48 ya que son muy altos en el segundo componente comparado con los otros datos.
+
+### Resumen de las componentes principales obtenidas con la matriz de correlaciones
+```{r}
+summary(cpR)
+```
+
+# Parte 3
+
+## Matriz de covarianzas
+```{r}
+library(FactoMineR)
+library(ggplot2) 
+cpS = PCA(S,scale.unit=FALSE)
+library(factoextra)
+fviz_pca_ind(cpS, col.ind = "blue", addEllipses = TRUE, repel = FALSE)
+fviz_pca_var(cpS, col.var = "red", addEllipses = TRUE, repel = TRUE)
+fviz_screeplot(cpS)
+fviz_contrib(cpS, choice = c("var"))
+```
+
+En las gráficas de variables, se puede ver claramente como la variable de PNB95 es la que mas contribuye por mucho porcentaje, con uno de casi 80%, seguido de la de ProdElec, con un poco mas de 20%, las otras variables contribuyendo muy poco a las dimensiones del modelo. 
+
+En el scree plot, y en los ejes de las primeras 4 gráficas también se puede ver que la dimensión 1 explica la varianza por un porcentaje muy grande, con un porcentaje de 98.7% comparandolo con el 1.3% de la segunda dimensión, que juntas explican toda la varianza
+
+## Matriz de correlaciones
+```{r}
+cpR = PCA(R,scale.unit=FALSE)
+library(factoextra)
+fviz_pca_ind(cpR, col.ind = "blue", addEllipses = TRUE, repel = FALSE)
+fviz_pca_var(cpR, col.var = "red", addEllipses = TRUE, repel = TRUE)
+fviz_screeplot(cpR)
+fviz_contrib(cpR, choice = c("var"))
+```
+
+En las gráficas de la matriz de correlación se puede ver como las variables en general son mucho más igualadas en cuanto a significancia a las dimensiones del modelo, hay mas variabilidad entre ellas.
+
+También en el scree plot se puede ver como se necesitarían más dimensiones para llegar a explicar un mejor porcentaje de la varianza, ya que la combinación de solo las primeras 2, explica el 82% de la varianza. 
+Por último, en la última gráfica podemos ver las contribuciones de las variables a la dimensión que más explica, y se observa lo que se mencionó previamente, de como contribuyen más variables de manera similar a este modelo.
+
+# Parte 4
+
+Comparando los resultados de las 2 matrices, podemos ver que la matriz de varianza explica mejor la varianza de los datos usando solo 2 componentes, con una explicación de practicamente el 100%, y se enseña que usa más que nada solo 2 de las variables de los datos, cuando la matriz de correlación ocuparía muchas más dimensiones para explicar lo que explica la de varianza en 2 dimensiones.
+
+En las gráficas se puede ver que las variables de PNB95 y ProdElec fueron las más destacadas al hacer el modelo, y las que en el análisis de varianza servirían más como datos indicadores en el dataset de los 96 países. Las demás variables son mucho más cercanas entre sí, pero esto debido a que son las que menos explican las dimensiones.
+
+En resumen, estas 2 variables de PNB95 y ProdElec se puede concluir que son las que más contribuirían a un estudio como indicadores económicos y sociales en los países que fueron parte de estos datos. En el modelo de componentes principales tuvieron altos coeficientes para influir en él.

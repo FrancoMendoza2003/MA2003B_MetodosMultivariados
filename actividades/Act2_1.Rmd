@@ -1,0 +1,164 @@
+---
+title: 'Actividad 2.1. Regresión lineal simple: Método de mínimos cuadrados'
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lmtest)
+library(nortest)
+```
+
+```{r}
+df = read.csv(file="mcdonaldsmenu.csv")
+head(df,3)
+```
+## 1. Analisis Exploratorio
+### Matriz de Covarianza de las variables elegidas: ("Protein", "Calories", "Cholesterol", "Total.Fat", "Carbohydrates", "Sodium")
+```{r}
+cuant_df = df[,c("Protein","Calories","Cholesterol","Total.Fat","Carbohydrates","Sodium")]
+cov(cuant_df)
+```
+
+### Matriz de correlacion de las variables elegidas
+```{r}
+cor(cuant_df)
+```
+
+Se elige de variable predictora "Protein", y su variable independiente "Sodium", esto debido a la alta correlación entre las 2 variables.
+
+## 2. Método de mínimos cuadrados:
+### Pendiente (b1)
+Primero separamos los datos a un dataframe que tenga solo estas 2 variables, este dataframe se llama data.
+
+#### Ahora para sacar b1 dividimos la covarianza de las 2 varianza entre la varianza de "x", en este caso "Sodium".
+```{r}
+data=cuant_df[,c("Protein","Sodium")]
+b1=cov(data)['Protein','Sodium']/var(data[,'Sodium'])
+b1
+```
+
+#### beta0 = Protein - 0.01722362*Sodium
+
+#### Para sacar b0 usamos la formula anterior, usando las medias de ambas variables.
+
+### Intercept (b0)
+```{r}
+b0 = mean(cuant_df$Protein)-b1*mean(cuant_df$Sodium)
+b0
+```
+
+## 3. Regresion lineal en R
+```{r}
+A = lm(data$Protein~data$Sodium)
+A
+```
+
+## 4. Representacion Grafica
+```{r}
+plot( data$Sodium, data$Protein ,col='red' ,ylab='Protein' ,xlab='Sodium' ,main='Regresion de Proteina con Sodio' )
+abline(A, col='blue' , lwd=2)
+text(1000,80, "y =0.01722362*x + 4.79985")
+```
+
+## 5. Coeficiente de determinacion
+```{r}
+summary(A)
+```
+Terminamos con un R cuadrado de 0.7566 lo cual nos dice que la variable Sodium nos  explica en un 75% de la variabilidad de Protein en el modelo.
+
+## 6. Validacion del modelo
+
+#### Usando un $\alpha$ de 0.05 
+
+### Significancia de los coeficientes de regresion
+```{r}
+summary(A)
+```
+
+#### Pendiente
+$H_0: \beta_1 = 0$ Si no se rechaza $H_0$, el valor de $\beta_1$ no es significante, la pendiente seria 0.
+
+$H_1: \beta_1 \neq 0$ Si se rechaza $H_0$ el valor de $\beta_1$ es significante, la pendiente si afectaria el modelo.
+
+#### Intercept
+$H_0: \beta_0 = 0$ Si no se rechaza $H_0$, el valor de $\beta_0$ no es significante, la interseccion en el eje y seria en 0.
+
+$H_1: \beta_0 \neq 0$ Si se rechaza $H_0$ el valor de $\beta_0$ es significante, la interseccion si afectaria el modelo.
+
+Los pvalue que nos dieron de 2e-16 son menor que el alfa que pusimos ya sea de de 0.05 o de 0.1 por lo que se rechaza $H_0$, por ende los coeficientes de la regresion lineal son significativos. 
+
+### Media cero de los residuos 
+```{r}
+t.test(A$residuals)
+```
+
+$H_0:$ La media de los residuos es igual a 0.
+$H_1:$ La media de los residuos no es igual a 0.
+
+El pvalue obtenido es 1, lo cual es muy alto. Este valor nos indica que no hay suficiente evidencia para rechazar la hipótesis nula. Esto sugiere que no hay diferencias estadísticamente significativas entre la media de los residuos y el valor de 0.
+
+### Distribucion Normal de los residuos
+```{r}
+ad.test(A$residuals)
+```
+
+$H_0:$ Los residuos siguen una distribución normal.
+$H_1:$ Los residuos no siguen una distribución normal.
+
+El pvalue tan bajo obtenido sugiere evidencia en contra de la hipótesis nula. Por lo tanto, se rechaza la hipótesis nula, lo que indica que hay suficiente evidencia para concluir que los residuos no siguen una distribución normal, lo que se puede ver en las siguientes graficas.
+
+```{r}
+qqnorm(A$residuals)
+qqline(A$residuals)
+hist(A$residuals)
+```
+
+Se puede ver en las graficas que no hay normalidad
+
+### Homocedasticidad (varianza constante)
+
+```{r}
+#install.packages("lmtest")
+library(lmtest)
+```
+```{r}
+bptest(A)
+```
+
+```{r}
+bptest(A,  varformula= ~ data$Sodium + I(data$Sodium^2) , data=data)
+```
+
+$H_0:$ No hay heterocedasticidad en los residuos.
+$H_1:$ Existe heterocedasticidad en los residuos.
+
+En ambos casos, los pvalue que estan por debajo del $\alpha$ sugieren la presencia de heterocedasticidad en los residuos del modelo de regresión, lo que lleva al rechazo de la hipótesis nula. Esto significa que la varianza de los errores es constante y que depende de los coeficientes.
+```{r}
+plot(A$fitted.values,A$residuals)
+abline(h=0,col='red',lwd=2)
+```
+
+### Independecia
+```{r}
+dwtest(A)
+```
+$H_0:$ autocorrelacion en los residuos $= 0$
+$H_1:$ autocorrelacion en los residuos $\neq 0$
+
+Se rechaza $H_0$ debido al pvalue que es menor que el $\alpha$, lo que nos dice que hay evidencia de autocorrelación en los residuos del modelo de regresión. Esto significa que los errores sí están correlacionados.
+```{r}
+plot(A$residuals)
+abline(h=0,col="red",lwd=2)
+```
+
+## 7. Conclusiones
+
+Se pudo conseguir el modelo de regresion correctamente usando la variable predictora de el sodio, con la variable dependiente siendo la proteina. Usando las formulas vistas en clase, el modelo salió de la misma forma que con la función lm de R.
+En el modelo en sí que se pudo ver que tiene coeficientes altamente significativos debido a sus pvalues tan pequeños, lo que nos dice que hay una relación alta entre las 2 variables. Se pudo observar que la relación fue significativa, con un error estándar residual de 5.649.
+Podemos concluir que el modelo se ajusta bien a los datos, aunque no es un modelo perfecto ya que hay muchas predicciones erróneas, y lejas de los datos originales, pero aún así se ve una tendencia positiva correcta de parte del modelo de regresión.

@@ -1,0 +1,180 @@
+---
+title: "Actividad 2.8 Regresión Logística"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(vcd)
+library(lmtest)
+
+#cargando la base de datos
+data=Weekly
+
+#resumen de dataset
+summary(data)
+head(data)
+```
+
+# 1. Divida el conjunto de datos en un conjunto de:
+```{r}
+train_indices <- data$Year < 2009
+test_indices <- data$Year >= 2009
+
+train <- data[train_indices, ]
+test <- data[test_indices, ]
+
+
+table(train$Direction)
+table(test$Direction)
+```
+
+# 2.  Formule un modelo de regresión logística con el cual predecir el rendimiento actual del índice bursátil.
+
+Mediante el uso de la función glm(modelo lineal) ajustamos el modelo de regresión logística para nuestra base de entrenamiento.
+```{r}
+#Ajuste del modelo
+model =glm(Direction~Lag2, family="binomial", data=train)
+
+#para la notación científica en el resumen
+options(scipen=999)
+
+#resumen del modelo
+summary(model)
+
+```
+
+
+# 3. Escriba el modelo de regresion logistica:
+$logit(Direction) = 0.20326 +0.05810*Lag_2$
+
+$p(Direction) = \frac{e^{0.20326 +0.05810*Lag_2}}{1+e^{0.20326 +0.05810*Lag_2}}$
+
+# 4. Interprete en el contexto del problema
+-¿Es estadísticamente significativo el predictor  (Lag2) ? ¿Cuál es su p-value?.
+
+Dado a que el p-value de el predictor Lag2 es de 0.04298, Lag2 es estadísticamente significativo a un nivel de significancia del 0.05. En resumen, hay evidencia para sugerir que el coeficiente de Lag2 es distinto de cero, lo que significa que Lag2 tiene cierta influencia en la dirección del mercado.
+
+-¿Qué indica el valor  $\beta_1$?: 
+
+Por cada unidad que se incrementa la variable Lag2, se espera que el logaritmo de odds de la variable Direction se incremente en promedio: 0.05810 unidades.
+
+Es decir, por cada unidad que se incrementa la variable Lag2, los odds de que Direction sea “Up” se incrementan en promedio 1.06 unidades.  Esto corresponde a una probabilidad de que el mercado tenga un valor positivo en el día de hoy de p= 0.51
+
+
+
+# 5. Represente gráficamente el modelo, grafique la curva de regresión logarítmica.
+
+## Predicciones de probabilidades 
+
+```{r}
+
+#Predicción de probabilidad de incumplimiento de cada individuo del set de prueba
+prob_test=predict(model, test, type="response")
+head(prob_test)
+
+
+#Convierte la variable Direction: "Up" and "Down" a 1's y 0's
+test$Direction= ifelse(test$Direction=="Up", 1, 0)
+head(test$Direction)
+
+
+```
+
+## Grafica
+```{r}
+test %>%
+  ggplot(aes(Lag2, test$Direction)) +
+  geom_point(aes(color = as.factor(Direction)), shape = 1) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"),color = "black",se = FALSE) +
+   theme_bw() +
+  labs(
+    title = "Logistic Regression Model", 
+    x = "Lag2",
+    y = "Probability of Direction"
+    )
+
+```
+
+
+# 6. Evalúe el modelo.
+```{r}
+anova(model)
+```
+
+El modelo nulo (sin predictor) tiene 984 grados de libertad (Resid. Df) y una devianza de 1354.7.
+El modelo con el predictor Lag2 tiene 983 grados de libertad (Resid. Df) y una devianza residual de 1350.5.
+Aquí, la devianza del modelo con Lag2 es menor que la devianza del modelo nulo. Esto sugiere que el modelo que incluye Lag2 como predictor tiene una mejor capacidad para explicar la variabilidad en los datos en comparación con el modelo sin ningún predictor.
+
+La diferencia en devianza indica que al incluir Lag2, se ha reducido la devianza en 4.2 unidades, lo que sugiere una mejora en la explicación del modelo.
+
+En términos de significancia, esta reducción en la devianza nos dice que el modelo con Lag2 es estadísticamente significativo y proporciona una mejor explicación de los datos en comparación con un modelo sin ningún predictor.
+
+```{r}
+library(MKclass)
+p_opt=optCutoff(prob_test, truth=test$Direction, namePos = 1)[1]
+p_opt
+
+predicted.classes=ifelse(prob_test > p_opt, 1, 0)
+head(predicted.classes)
+
+```
+
+```{r}
+library(caret)
+
+conf.table=table(pred=predicted.classes, true=test$Direction)
+conf.table
+confusion =confusionMatrix(as.factor(predicted.classes), as.factor(test$Direction))
+confusion
+```
+
+En resumen, el modelo tiene una precisión del 62.5%, pero muestra un desempeño asimétrico entre las dos clases (0 Down y 1 Up), con una sensibilidad baja para la clase 0 y una alta especificidad para la clase 1. Además, el coeficiente Kappa sugiere una concordancia ligera entre las predicciones y las clases reales.
+
+```{r}
+mosaic(confusion$table,main="Matriz de confusion")
+```
+
+Aquí podemos ver un mosaico de la matriz de confusión, y se puede remarcar que la mayor parte de las predicciones son de que va a ir en una dirección para arriba.
+
+# 7. Valide los supuestos del modelo
+
+## Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+plot(model$residuals)
+abline(h=0, col = "red", lwd = 2)
+dwtest(model)
+```
+
+Debido al valor p de 0.9923, y por cómo se ven los residuos en la gráfica, estando lejos de la línea roja todos, podemos ver que hay independencia, ya que no tenemos suficiente evidencia para rechazar la hipótesis nula. En conclusión, sí hay independencia en los residuos.
+
+## Linealidad
+
+```{r}
+plot(test$Lag2,prob_test,pch=19,col="blue",xlab="Lag2",ylab="Logit(Direccion)",main="Logit(Direccion) vs Lag2")
+abline(lm(prob_test ~ test$Lag2), col="red", lwd=2)
+```
+
+Debido a que los valores de las predicciones están en la línea roja del modelo lineal, se acepta que hay linealidad en el modelo.
+
+## Tamaño muestral
+
+```{r}
+table(data$Direction)
+```
+
+El resultado menos frecuente es el de Down, y se tienen 484 resultados, siendo que es mucho mayor que 10, se cumple el tamaño muestral.

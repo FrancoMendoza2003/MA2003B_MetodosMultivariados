@@ -1,0 +1,105 @@
+---
+title: "Actividad 1.9 Conglomerados jerárquicos"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problema 1
+```{r,message=FALSE,echo=FALSE}
+library(ggplot2)
+library(factoextra)
+```
+
+## 1. Como nos dan sólo para la parte inferior de la matriz (simétrica), puede introducir los datos de varias formas. Por ejemplo, introduzca la matriz en R con 0 en los espacios en blanco.
+```{r}
+Mpre = matrix(c(0,1,5,8.5,7.2, 0,0, 4.5,7.8,6.7,0,0,0,3.6,2.2,0,0,0,0,2,0,0,0,0 , 0), ncol = 5)
+M = Mpre + t(Mpre)
+M
+```
+
+## 2. Apliquen las funciones as.dist, hclust y plot para explorar los dendrogramas (que se diferencian por las distancias en el eje Y)
+```{r}
+d = as.dist(M)  
+J = hclust(d, method = "average")   
+plot(J, hang = -1, lwd = 2, col = "blue", main = "Dendrograma de conglomerados: Método Promedio", sub = "objetos", xlab = "n",ylab = c("distancia"))
+```
+
+## 3. Para interpretar sobre el número óptimo de clusters puede ayudar la función fviz_nbclust
+```{r}
+fviz_nbclust(M, FUNcluster = kmeans, method = "wss", k.max = 4) 
+```
+
+En esta grafica que nos muestra la suma total cuadrada con cada cluster, podemos ver que el número de clusters que sería mejor podría ser el de 3, ya que nos proporciona buenos cambios en la gráfica, y agregar clusters daría cambios mínimos e innecesarios.
+
+## 4. Hallar la matriz de ultra distancias (las distancias de los objetos según el  dendograma)
+```{r}
+heights <- J$height
+
+n <- length(heights) + 1
+ultra <- matrix(0, nrow = n, ncol = n)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i == j) {
+      ultra[i, j] <- 0
+    } else if (i < j) {
+      ultra[i, j] <- heights[i] + heights[j - 1]
+      ultra[j, i] <- ultra[i, j]
+    }
+  }
+}
+cat("Matriz de ultra distancias:\n\n")
+ultra
+```
+
+## 5. Elige otro metodo de agrupación y elabora el dendograma, ¿qué disferencias encuentras entre ambos?
+
+Usamos el método de enlace completo, busca clusters similares.
+```{r}
+d = as.dist(M)  
+J = hclust(d, method = "complete")   
+plot(J, hang = -1, lwd = 2, col = "blue", main = "Dendrograma de conglomerados: Enlace completo", sub = "objetos", xlab = "n",ylab = c("distancia"))
+```
+
+```{r}
+fviz_nbclust(M, FUNcluster = kmeans, method = "wss", k.max = 4) 
+```
+
+Con este método de enlace completo, podemos ver que el número óptimo ce clusters seguiría siendo de 3, ya que más que eso hay cambio casi nulo, y con 2 clusters se puede ver que tiene mucho por ganar todavía en la gráfica.
+
+```{r}
+heights <- J$height
+
+n <- length(heights) + 1
+ultra <- matrix(0, nrow = n, ncol = n)
+
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (i == j) {
+      ultra[i, j] <- 0
+    } else if (i < j) {
+      ultra[i, j] <- heights[i] + heights[j - 1]
+      ultra[j, i] <- ultra[i, j]
+    }
+  }
+}
+cat("Matriz de ultra distancias:\n\n")
+ultra
+```
+
+También podemos ver que aunque las gráficas sean muy similares, la matriz de ultra distancias aún tiene cambios.
+
+### Diferencias en los métodos.
+- En el primer método con enlace promedio, las distancias ultramétricas tienden a ser más pequeñas. Por ejemplo, las distancias entre los elementos 1, 2, y 3 son 2.0, 3.0, y 3.9 respectivamente. Estos valores son menores que las distancias correspondientes en el método de enlace completo.
+  
+- En el segundo método con enlace completo, las distancias ultramétricas tienden a ser mayores en comparación con el método de enlace promedio. Aquí, las distancias entre los elementos tienden a ser más grandes. Por ejemplo, las distancias entre 1, 2, y 3 son 2.0, 4.0, y 5.8 respectivamente, valores más grandes que en el primer método.
+
+Estas diferencias se deben a cómo se calcula la distancia entre los clusters en cada método de agrupación jerárquica. El método de enlace promedio calcula las distancias entre clusters considerando el promedio de todas las distancias entre pares de puntos en los clusters individuales. Mientras que el método de enlace completo considera la máxima distancia entre pares de puntos en los clusters individuales.
+
+Podemos ver que aún con estas diferencias obtuvimos resultados muy similares, y llegamos a las mismas conclusiones, pero en otras aplicaciones, o con datos más grandes esto puede cambiar dependiendo del método por lo que es bueno identificar el uso que se le va a dar a los datos para elegir correctamente dependiendo de lo que se busque.
+

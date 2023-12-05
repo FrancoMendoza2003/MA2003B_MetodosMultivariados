@@ -1,0 +1,151 @@
+---
+title: "Actividad 2.5 Intervalos de confianza de una regresión"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE}
+library(threejs)
+library(car)
+```
+
+
+# 1. Modelo de regresión
+```{r,echo=FALSE}
+df = read.csv("datosRes.csv")
+head(df,5)
+y = df$Resistencia
+x1 = df$Longitud
+x2 = df$Altura.matriz
+```
+
+```{r}
+A = lm(y~x1)
+B = lm(y~x1+x2)
+alfa = 0.05
+```
+
+## Modelo lineal simple
+```{r}
+A
+```
+
+Se hizo un modelo de regresion lineal simple con la variable predictora de longitud, debido a la correlacion que tiene con la variable a predecir de resistencia.
+
+## Modelo lineal multiple
+```{r}
+B
+```
+
+En este modelo de regresion lineal multiple se usaron las variables predictoras de longitud y altura.matriz para predecir resistencia tambien. 
+
+# 2. Intervalos de regresion
+
+## Modelo lineal simple
+```{r}
+confint(A, level=1-alfa)
+```
+
+El intercepto en este intervalo de confianza va desde 2.74 a 7.48, y la x1 puede ir desde 2.66 hasta 3.14. Esto significa que, con un 95% de confianza, se espera que el valor real del intercepto y la pendiente de la longitud caigan dentro de estos intervalos respectivos en la relación de regresión entre la longitud y la resistencia.
+
+```{r}
+predA1=predict(A, interval = "confidence", level=1-alfa)
+head(predA1,6)
+```
+
+En este resultado podemos ver los valores predichos del modelo de regresion lineal en la columna fit, y su intervalo de confianza para la prediccion yendo de lwr a upr.
+Este enfoque de intervalos de confianza proporciona una medida de la incertidumbre asociada con las predicciones del modelo. Cuanto más estrecho sea el intervalo, mayor será la precisión de la predicción.
+
+```{r}
+predA2=predict(A, interval = "prediction", level=1-alfa)
+head(predA2,6)
+```
+
+Esta funcion hace algo parecido al pasado, en comparación con los intervalos de confianza, los intervalos de predicción son generalmente más amplios, ya que tienen en cuenta tanto la variabilidad en la estimación del modelo como la variabilidad inherente en la respuesta.
+
+## Modelo lineal multiple
+```{r}
+confint(B, level=1-alfa)
+```
+
+El intercepto en este intervalo de confianza va desde 0.065 a 4.462, la x1 puede ir desde 2.55 hasta 2.938, y la x2 puede ir desde 0.0067 hasta 0.018. Esto significa que, con un 95% de confianza, se espera que el valor real del intercepto, la pendiente de la longitud, y la pendiente de la altura.matriz caigan dentro de estos intervalos respectivos en la relación de regresión entre la longitud y altura.matriz, y la resistencia.
+
+
+```{r}
+predB1=predict(B, interval = "confidence", level=1-alfa)
+head(predB1,6)
+```
+
+En este resultado podemos ver los valores predichos del modelo de regresion multiple en la columna fit, y su intervalo de confianza para la prediccion yendo de lwr a upr.
+Este enfoque de intervalos de confianza proporciona una medida de la incertidumbre asociada con las predicciones del modelo. Cuanto más estrecho sea el intervalo, mayor será la precisión de la predicción.
+
+```{r}
+predB2=predict(B, interval = "prediction", level=1-alfa)
+head(predB2,6)
+```
+
+Esta funcion hace algo parecido al pasado, en comparación con los intervalos de confianza, los intervalos de predicción son generalmente más amplios, ya que tienen en cuenta tanto la variabilidad en la estimación del modelo como la variabilidad inherente en la respuesta.
+
+
+# 3. Intervalos para una nueva observacion
+
+## Modelo de regresion simple
+```{r}
+resistencia_real = 33.49
+x = data.frame(x1=c(12),x2=c(535))
+predict(object=A,newdata = x,interval="confidence",level = 1-alfa)
+```
+
+Podemos ver que el resultado de resistencia real no queda dentro de el intervalo de confidence.
+
+```{r}
+predict(object=A, newdata=x, interval="prediction", level=1-alfa)
+```
+
+Podemos ver que el resultado de resistencia real si queda dentro de el intervalo de prediction debido a que se extiende mas.
+
+## Modelo de regresion multiple
+```{r}
+predict(object=B,newdata = x,interval="confidence",level = 1-alfa)
+```
+
+Podemos ver que el resultado de resistencia real no queda dentro de el intervalo de confidence.
+
+```{r}
+predict(object=B, newdata=x, interval="prediction", level=1-alfa)
+```
+
+Podemos ver que el resultado de resistencia real no queda dentro de el intervalo de prediction, y queda lejos todavia en el modelo de regresion lineal multiple.
+
+# 4. Representación gráfica
+```{r}
+plot(x1,y,xlab="Longitud",ylab="Resistencia",main="Modelo regresion lineal simple")
+abline(A,col = "purple",lwd=2)
+
+lines(x1,predA1[,"lwr"],col = "blue")
+lines(x1,predA1[,"upr"],col = "blue")
+
+lines(x1,predA2[,"lwr"],col = "red")
+lines(x1,predA2[,"upr"],col = "red")
+
+legend("bottomright",legend=c("Regresion","Intervalo de Confianza","Intervalo de prediccion"),col = c("purple","blue","red"),lty = 1)
+```
+
+```{r}
+confidenceEllipse(B,fill=TRUE,lwd=0,levels=0.99,which.coef=c("x1","x2"),main="Elipse de 99% de confianza regresion multiple")
+```
+
+Podemos observar que las variables tienen una correlación debido a la forma elíptica que mantienen. También se nota una correlación negativa, ya que al aumentar la variable x1, la x2 disminuye, como se puede apreciar en la pendiente inclinándose hacia la izquierda.
+
+# 5. Conclusiones
+
+Pudimos crear modelos de regresión lineal y múltiple para predecir la variable resistencia, eligiendo variables que mostraron una correlación aceptable con ella para establecer una conexión.
+
+También exploramos cómo funcionan los intervalos de confianza, en nuestro caso con un 95% de confianza, y cómo son de gran utilidad para proporcionar información sobre los datos, teniendo en cuenta la variabilidad de las variables independientes del modelo.
+
+Al realizar pruebas de predicciones en el modelo múltiple, pudimos observar que el modelo no funcionó de la mejor manera, a pesar de que se observaban buenos ajustes en actividades anteriores. Esto puede indicar que hay una mayor variabilidad o incertidumbre en los datos de lo que se espera.

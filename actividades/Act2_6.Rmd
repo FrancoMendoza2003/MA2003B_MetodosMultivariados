@@ -1,0 +1,283 @@
+---
+title: "Actividad 2.6. Análisis discriminante"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Designa tu variable categórica como variable dependiente para una clasificación y tus variables numéricas como variables independientes.
+```{r,warning=FALSE,echo=FALSE}
+library(caret)
+library(MASS)
+library(ggplot2)
+library(MVN)
+
+M=read.csv("kc_house_data.csv")
+head(M)
+str(M)
+
+#Remover observaciones con precio mayor a  $1.5M
+M <- subset(M, price <= 1500000) 
+
+#Agregar una nueva variable categórica: Category
+M$Category <- factor(ifelse(M$price < 500000, "low", ifelse(M$price < 1000000, "medium","high")))
+
+#Estructura de los datos
+str(M)
+
+# Nombres de columnas del data set
+all_cols <- names(M)
+
+#Crear un data frame para la columna categoría
+Category <- data.frame(M[,22])
+
+#Se eliminan las primeras tres columnas (ID, Date, y Category)
+M <-M[,-c(1:3,22)]
+
+# Identificar variables con varianza cercana a cero: remove_cols
+remove_cols <- nearZeroVar(M)
+
+# Remover variables con varianza cercana a cero
+M2 <- M[,-remove_cols]
+
+
+#Agregar la variable categoría al data frame
+M2$Category <- Category[,1]
+head(M2,5)
+```
+
+# 2. Acota tu base de datos realizando un muestreo aleatorio de 300 observaciones.
+```{r}
+set.seed(123)
+M_sample <- M2[sample(nrow(M2), 300), ]
+```
+
+# 3. Muestre gráficamente la segmentación original de los datos. Realiza un gráfico de dispersión donde se identifiquen las diferentes categorías de tu base de datos. ¿Qué variable o variables discriminan mejor?
+```{r}
+library(ggplot2)
+#Asignamos un color a cada especie
+color = c(low="blue",medium="green",high="orange")
+color
+
+#Creamos un vector con el color corresponidente a cada observacion de acuerdo a la columna Species
+col.ind=color[M_sample$Category]
+plot(M_sample[1:5],pch=21,bg=col.ind,col="gray")
+```
+
+```{r}
+plot(M_sample[6:10],pch=21,bg=col.ind,col="gray")
+```
+
+```{r}
+plot(M_sample[11:14],pch=21,bg=col.ind,col="gray")
+```
+
+Debido a la baja utilidad que nos dan las variables de zipcode, yr_built, lat y long las eliminaremos, ya que tambien hacen mucho cambio en las graficas.
+
+También como no se ve mucha discriminación en las otras variables, solo dejamos las de condition, grade, sqft_living, y sqft_lot15. En estas se nota mucho la discriminación en las categorias.
+
+```{r}
+M_nueva= M_sample[,-c(1,2,3,4,5,8,9,10,11,12)]
+head(M_nueva,5)
+```
+
+
+# 4. Realiza un análisis discriminante para responder las siguientes preguntas:
+
+## a) Obtener la media para cada variable predictora en función del grupo:
+```{r}
+numeric_cols <- M_nueva[, 1:4]
+categories <- M_nueva$Category
+means_by_category <- aggregate(numeric_cols, by = list(Category = categories), FUN = mean)
+print(means_by_category[,-6])
+```
+
+Aquí tenemos las medias de las variables predictoras que seleccionamos en el análisis discriminante.
+
+## b) Mostrar las probabilidades a priori para las diferentes clases:
+```{r}
+prior_prob <- prop.table(table(M_nueva$Category))
+print(prior_prob)
+```
+
+## c) Determinar la función discriminante lineal:
+```{r}
+lda_model <- lda(Category ~ ., data = M_nueva)
+print(lda_model)
+```
+
+Este es nuestro modelo/ funcion discriminante lineal, podemos tambien observar las probabilidades a priori de las clasificaciones. low: 0.633, medium: 0.323 y high: 0.043. 
+
+Tambien podemos observar los coeficientes de las variables discriminantes del modelo, el coeficiente más alto siendo el de grade con 7.403e-01 en el LD1 y 4.7656e-01 en el LD2. La proporción de trace del modelo es .9801 en el LD1 y 0.0199 en el LD2.
+
+## d) Graficar el histograma de valores discriminantes en cada grupo:
+```{r}
+lda_values <- predict(lda_model)$x
+hist(lda_values[M_nueva$Category == "low"], col = "blue", main = "Histograma de valores discriminantes por categoría")
+hist(lda_values[M_nueva$Category == "medium"], col = "green", add = TRUE)
+hist(lda_values[M_nueva$Category == "high"], col = "orange", add = TRUE)
+legend("topright", legend = levels(M_nueva$Category), fill = c("blue", "green", "orange"))
+```
+
+```{r}
+predicted = predict(lda_model)
+
+names(predicted)
+
+head(predicted$class)
+head(predicted$posterior)
+head(predicted$x)
+```
+
+## e) Mostrar gráficamente la segmentación de los datos con predicciones del modelo:
+```{r}
+ldahist(data=predicted$x[,1],g=M_nueva$Category, main="Histograma de la función discriminante LD1")
+ldahist(data=predicted$x[,2],g=M_nueva$Category, main="Histograma de la función discriminante LD2")
+```
+
+Visualizaremos la forma en que cada uno de las funciones discriminantes lineales separan las tres clases diferentes
+
+```{r}
+#definimos los datos a graficar
+plot(LD2~LD1,data = predicted$x,pch=21,col="gray",bg=col.ind,main="Valores discriminantes de las observaciones")
+
+```
+
+Visualizaremos la clasificación realizada por las predicciones:
+
+```{r}
+#Asignamos un color a cada categoria
+color2=c(low='blue',medium='green',high='orange')
+
+#Creamos un vector con el color corresponidente a cada observacion de acuerdo a la columna Category
+col.ind2=color2[predicted$class]
+
+#Graficos de dispersion con el color de acuerdo al tipo de categoria
+plot(M_nueva[-5],pch=21,bg=col.ind,col='gray')
+plot(M_nueva[-5],pch=21,bg=col.ind2,col='gray')
+
+
+```
+
+Podemos ver los scatter plots de las variables seleccionadas, junto con las predicciones que se hicieron con el modelo.
+
+## f) Evaluar la precisión del modelo:
+```{r}
+confusion_matrix <- table(predicted$class, M_nueva$Category)
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Precisión del modelo:", round(accuracy * 100, 2), "%"))
+print(confusion_matrix)
+
+
+# porcentaje de observaciones clasificadas erróneamente
+rate=1-mean(predicted$class==M_nueva$Category)
+
+cat("\n El porcentaje de observaciones clasificadas erróneamente es: ",rate*100,"%")
+```
+
+Podemos ver que la precisión del modelo es bastante alta, con una de 73.67%, en la matriz de confusión se ven algunos pocos errores, que son significantes en este caso, cosa que podría ser debido a la baja cantidad de datos.
+
+# 5. Validar los supuestos del modelo:
+
+## Low
+```{r}
+# Graficos de densidad
+low = M_nueva[M_nueva[,5]=='low',]
+medium = M_nueva[M_nueva[,5]=='medium',]
+high = M_nueva[M_nueva[,5]=='high',]
+
+par(mfrow=c(2,2))
+plot(density(low$condition),main = "Density Plot of Condition",xlab =' Condition')
+plot(density(low$grade),main = "Density Plot of Grade",xlab =' Grade')
+plot(density(low$sqft_living15),main = "Density Plot of Sqft_living15",xlab =' Sqft_living15')
+plot(density(low$sqft_lot15),main = "Density Plot of Sqft_lot15",xlab =' Sqft_lot15')
+
+head(low)
+lowhist = mvn(data=low[,1:4],mvnTest = "royston",univariatePlot = "histogram")
+lowqq = mvn(data = low[,1:4],mvnTest = "royston",univariatePlot = "qqplot")
+```
+
+### Pruebas de normalidad
+
+$H_0:$ Los datos tienen una distribución normal.
+
+$H_1:$ Los datos no tienen una distribución normal.
+
+```{r}
+mvn(data=low[,1:4],mvnTest = "mardia")
+```
+
+Debido a que los valores p de las pruebas de mardia de normalidad multivariada son menores al $\alpha$ de 0.05, se concluye que los datos de la categoria high no tienen una distribución normal.
+
+## Medium
+```{r}
+par(mfrow=c(2,2))
+plot(density(medium$condition),main = "Density Plot of Condition",xlab =' Condition')
+plot(density(medium$grade),main = "Density Plot of Grade",xlab =' Grade')
+plot(density(medium$sqft_living15),main = "Density Plot of Sqft_living15",xlab =' Sqft_living15')
+plot(density(medium$sqft_lot15),main = "Density Plot of Sqft_lot15",xlab =' Sqft_lot15')
+
+head(medium)
+mediumhist = mvn(data=medium[,1:4],mvnTest = "royston",univariatePlot = "histogram")
+mediumqq = mvn(data = medium[,1:4],mvnTest = "royston",univariatePlot = "qqplot")
+```
+
+### Pruebas de normalidad
+
+$H_0:$ Los datos tienen una distribución normal.
+
+$H_1:$ Los datos no tienen una distribución normal.
+
+```{r}
+mvn(data=medium[,1:4],mvnTest = "mardia")
+```
+Debido a que los valores p de las pruebas de mardia de normalidad multivariada son menores al $\alpha$ de 0.05, se concluye que los datos de la categoria medium no tienen una distribución normal.
+
+## High
+```{r}
+par(mfrow=c(2,2))
+plot(density(high$condition),main = "Density Plot of Condition",xlab =' Condition')
+plot(density(high$grade),main = "Density Plot of Grade",xlab =' Grade')
+plot(density(high$sqft_living15),main = "Density Plot of Sqft_living15",xlab =' Sqft_living15')
+plot(density(high$sqft_lot15),main = "Density Plot of Petal Width",xlab =' Sqft_lot15')
+
+head(high)
+highhist = mvn(data=high[,1:4],mvnTest = "royston",univariatePlot = "histogram")
+highqq = mvn(data = high[,1:4],mvnTest = "royston",univariatePlot = "qqplot")
+```
+
+### Pruebas de normalidad
+
+$H_0:$ Los datos tienen una distribución normal.
+
+$H_1:$ Los datos no tienen una distribución normal.
+
+```{r}
+mvn(data=high[,1:4],mvnTest = "mardia")
+```
+
+Debido a que uno de los valores p de las pruebas de mardia de normalidad multivariada es menor al $\alpha$ de 0.05, se concluye que los datos de la categoria high no tienen una distribución normal.
+
+### Prueba de homogeneidad de matrices de covarianza
+
+Ho: Var-cov M low = var cov M medium = var-cov M high
+
+Ha: al menos dos matrices no son iguales
+
+```{r,warning=FALSE}
+library(heplots)
+library(car)
+library(carData)
+library(broom)
+
+boxM(M_nueva[,-5],M_nueva[,5],conf.level=0.99)
+
+```
+
+Debido a que el valor p es muy bajo, se tiene suficiente evidencia para rechazar nuestra hipotesis nula, por lo que  se cncluye que al menos dos de las matrices de covarianza no son iguales.
+
+Como no se encontró normalidad en los datos de las categorías, los siguientes pasos serían hacer una transformación de los datos buscando esta normalidad, ya sea con técnicas como box'cox o Yeo-Johnson.

@@ -1,0 +1,611 @@
+---
+title: "Laboratorio. Módulo 2"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo=FALSE}
+library(MASS)
+library(nortest)
+library(lmtest)
+library(car)
+library(rattle)
+```
+
+# Problema 1
+
+```{r}
+data = Cars93
+head(data)
+```
+## A.  Analice si existe una correlación entre el peso de un vehículo (Weight) y la potencia de su motor (Horsepower).
+```{r}
+cor(data$Weight, data$Horsepower)
+```
+
+Podemos ver que las 2 variables tienen una correlaicon de 0.74, lo cual indica que existe una correlación positiva entre el peso de un vehículo y la potencia de su motor, y es una correlación significativa.
+
+## B. Proponga un modelo de regresión simple para estas variables.
+```{r}
+y= data$Horsepower
+x= data$Weight
+regresion = lm(y ~ x)
+summary(regresion)
+```
+
+Este modelo nos da una R^2 ajustada de 0.54, lo cual no es muy bueno, pero nos indica que el modelo es significativo. Tambien podemos ver que el valor p de los coeficientes es menor a un alfa de 0.05, lo que nos dice que se puede rechazar la hipotesis nula de que son igual a 0, y se concluye que los coeficientes son significativos. El modelo es el siguiente:
+
+$Horsepower=-57.738203+0.065595*Weight$
+
+## C. Realice la validación de los supuestos del modelo.
+
+### Normalidad de los residuos
+
+$H_0:$ Los residuos provienen de una distribución normal.
+
+$H_1:$ Los residuos no provienen de una distribución normal.
+
+```{r}
+ad.test(residuals(regresion))
+```
+
+```{r}
+qqnorm(regresion$residuals,main = "Q-Q Plot",xlab = "Cuantiles Teóricos",ylab= "Cuántiles de los datos")
+qqline(regresion$residuals,col="red")
+```
+
+Debido al valor p bajo de la prueba de Anderson-Darling, se rechaza la hipotesis nula y se concluye que los residuos no provienen de una distribución normal. Esto se puede ver en el Q-Q plot, ya que los residuos no siguen la linea roja, ya que al final se dispersan mucho.
+
+### Homocedasticidad
+
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(regresion)
+```
+
+Debido al valor p bajo de la prueba de Breusch-Pagan, se rechaza la hipotesis nula y se concluye que la varianza de los errores no es constante, lo cual es malo para el modelo ya que hay heterocedasticidad.
+
+### Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+dwtest(regresion)
+```
+
+```{r}
+plot(regresion$residuals,main = "Residuos",xlab = "Observaciones",ylab = "Residuos")
+abline(h=0,col="red")
+```
+
+Debido al valor p alto de la prueba de Durbin-Watson, no se puede rechazar la hipotesis nula y se concluye que los residuos son independientes, esto se puede ver en la grafica anterior, con la aleatoriedad de los residuos.
+
+## D. Identifique los datos atípicos y datos influyentes y describa los criterios implementados para su determinación.
+
+### Datos atipicos
+```{r}
+plot(regresion,which=1)
+```
+
+Con esta grafica podemos identificar facilmente los datos atipicos, ya que son los que estan muy alejados de la linea roja. En este caso, los datos atipicos son los siguientes: 57, 19, y 28.
+
+### Datos Influyentes
+
+Segun los valores hat:
+```{r,echo = FALSE}
+hat = hatvalues(regresion)
+n = length(hat)
+c = 2.5*(1+1)/n
+cat("Criterio de Influencia: ",c,"\n\n")
+cat("Datos Influyentes:\n")
+for (i in 1:n){
+  if (hat[i]>c){
+    print(hat[i])
+  }
+}
+```
+
+Segun el metodo de Cook:
+```{r}
+influencePlot(regresion,id=TRUE)
+```
+
+## E. Calcule:
+
+### 1. Intervalos de confianza para los coeficientes de regresión
+```{r}
+confint(regresion)
+```
+
+### 2. Intervalos de confianza para la respuesta media de la regresión
+```{r}
+resmed=predict(regresion, interval = "confidence")
+head(resmed)
+```
+
+### 3. Intervalos de predicción
+```{r,warning=FALSE}
+pred=predict(regresion, interval = "prediction")
+head(pred)
+```
+
+## F. Realice un gráfico donde se ilustren los intervalos de confianza de la respuesta media y predicción.
+```{r}
+plot(data$Weight,data$Horsepower,main = "Intervalos de Confianza",xlab = "Weight",ylab = "Horsepower")
+abline(regresion,col="red",lwd=2)
+lines(data$Weight,resmed[,2],col="blue",lwd=2)
+lines(data$Weight,resmed[,3],col="blue",lwd=2)
+lines(data$Weight,pred[,2],col="green",lwd=2)
+lines(data$Weight,pred[,3],col="green",lwd=2)
+legend("topleft",legend = c("Regresion","Confianza de la Respuesta Media","Confianza de la Prediccion"),col = c("red","blue","green"),lty = c(1,1,1))
+
+```
+
+Podemos ver que la mayor parte de los datos quedan dentro de los intervalos de confianza de la respuesta media y de la prediccion, lo cual es bueno, hay pocos que salen de estos, que serían los datos atípicos.
+
+## G. Proponga un segundo modelo implementando una transformación a la variable Horsepower de modo que se satisfaga el supuesto de normalidad.
+
+### Normalidad
+```{r}
+ad.test(y)
+```
+
+Como el valor p de la prueba de Anderson-Darling es menor a 0.05, se rechaza la hipotesis nula y se concluye que los datos no provienen de una distribución normal.
+
+```{r}
+bc = boxcox(lm(y~1))
+l =bc$x[which.max(bc$y)]
+cat("Lambda optimo: ",l)
+```
+
+Nuestro lambda optimo es de 0.202, por lo que la transformacion es la siguiente:
+
+```{r}
+y2 = ((y^l)-1)/l
+head(y2)
+```
+
+### Normalidad nuevos datos y
+```{r}
+ad.test(y2)
+```
+
+### Nuevo Modelo
+```{r}
+new_model = lm(y2~x)
+summary(new_model)
+```
+
+Igual concluimos que los coeficientes son significativos debido a sus valores p siendo muy cercanos a 0, y el modelo es un poco mejor debido al R^2 de 0.6502, que es mayor al anterior.
+
+## H. Contraste los resultados de la validación del segundo modelo con el obtenido inicialmente.
+
+### Normalidad de los residuos
+
+$H_0:$ Los residuos provienen de una distribución normal.
+
+$H_1:$ Los residuos no provienen de una distribución normal.
+
+```{r}
+ad.test(residuals(new_model))
+```
+
+```{r}
+qqnorm(new_model$residuals,main = "Q-Q Plot",xlab = "Cuantiles Teóricos",ylab= "Cuántiles de los datos")
+qqline(new_model$residuals,col="red")
+```
+
+Debido a que el valor p sigue estando por debajo del alfa de 0.05 de la prueba de Anderson-Darling, se rechaza la hipotesis nula y se concluye que los residuos no provienen de una distribución normal. Esto se puede ver en el Q-Q plot, ya que los residuos no siguen la linea roja, aunque se ve un poco mejor este modelo que el anterior.
+
+### Homocedasticidad
+
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(new_model)
+```
+
+Debido al valor p igual estando por  debajo del alfa en la prueba de Breusch-Pagan, se rechaza la hipotesis nula y se concluye que la varianza de los errores no es constante.
+
+### Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+dwtest(new_model)
+```
+
+```{r}
+plot(new_model$residuals,main = "Residuos",xlab = "Observaciones",ylab = "Residuos")
+abline(h=0,col="red")
+```
+
+Debido al valor p por encima del alfa con 0.5578 en la prueba de Durbin-Watson, no se puede rechazar la hipotesis nula y se concluye que los residuos son independientes, esto se puede ver en la grafica anterior, con la aleatoriedad de los residuos.
+
+### Conclusión de los modelos
+
+Se puede ver que los 2 modelos cumplieron los supuestos de la misma manera, los 2 modelos solo cumpliendo 1 supuesto. Esto nos dice que los modelos son parecidos en lo confiable que son, la diferencia es que el primer modelo explicó el 54% de variabilidad, mientras que el segundo modelo explicó el 65% de variabilidad, por lo que el segundo modelo podría concluirse que es mejor que el primero en este caso.
+
+# Problema 2
+
+## A. Realice el análisis de correlación entre las variables numéricas y seleccione un conjunto de variables numéricas puedan explicar la variabilidad del precio del vehículo.
+```{r}
+number = data[sapply(data,is.numeric)]
+data_num = number[,-c(16,17)]
+head(data_num)
+```
+
+```{r}
+corr = as.data.frame(cor(data_num))
+corr
+```
+
+## B. A partir de las variables seleccionadas, ajuste un modelo de regresión lineal múltiple.
+```{r}
+corr["Price"]
+```
+
+
+```{r}
+y= data_num$Price
+x1= data_num$Horsepower
+x2 = data_num$Wheelbase
+x3 = data_num$MPG.highway
+x4 = data_num$Rev.per.mile
+```
+
+Se eligieron las variables Horsepower, Wheelbase, MPG.highway y Rev.per.mile, ya que son las que tienen mayor correlacion con el precio, sin tener una alta correlación entre ellas.
+
+```{r}
+regresion = lm(y~x1+x2+x3+x4)
+summary(regresion)
+```
+
+Podemos ver que el modelo tiene una variable con un valor p por encima de el alfa de 0.05, por lo que se puede eliminar esta variable y volver a hacer el modelo, en este caso es x3, MPG.highway.
+
+```{r}
+regresion2 = lm(y~x1+x2+x4)
+summary(regresion2)
+```
+
+Ahora tenemos que el R^2 ajustado es de 0.6483, y todas las variables son significativas.
+
+## C. Realice la validación de los supuestos del modelo.
+
+### Normalidad de los residuos
+
+$H_0:$ Los residuos provienen de una distribución normal.
+
+$H_1:$ Los residuos no provienen de una distribución normal.
+
+```{r}
+ad.test(residuals(regresion2))
+```
+
+```{r}
+qqnorm(regresion2$residuals,main = "Q-Q Plot",xlab = "Cuantiles Teóricos",ylab= "Cuántiles de los datos")
+qqline(regresion2$residuals,col="red")
+
+```
+
+Debido a que el valor p de la prueba de Anderson-Darling es menor a 0.05, y muy cercan a 0, se rechaza la hipotesis nula y se concluye que los residuos no provienen de una distribución normal. Esto se puede ver en el Q-Q plot, ya que los residuos no siguen la linea roja.
+
+### Homocedasticidad
+
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(regresion2)
+
+```
+
+Debido a que el valor p está por encima del alfa de 0.05 en la prueba de Breusch-Pagan, no se puede rechazar la hipotesis nula y se concluye que la varianza de los errores es constante, esto es bueno porque se concluye que si hay homocedasticidad.
+
+### Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+dwtest(regresion2)
+```
+
+```{r}
+plot(regresion2$residuals,main = "Residuos",xlab = "Observaciones",ylab = "Residuos")
+abline(h=0,col="red")
+```
+
+Debido al valor p de 0.011, que está por debajo del alfa de 0.05 en la prueba de Durbin-Watson, se rechaza la hipotesis nula y se concluye que los residuos no son independientes, esto se puede ver en la grafica anterior, ya que los residuos no son aleatorios, y se ven más cercanos siguiendo a la línea roja.
+
+## D. Identifique los datos atípicos y datos influyentes y describa los criterios implementados para su determinación.
+
+### Datos atípicos
+```{r}
+plot(regresion2,which = 1)
+```
+
+Con esta gráfica podemos identificar que los datos atípicos son el 58, 59 y 28, ya que están muy alejados de los demás datos.
+
+### Datos influyentes
+
+Segun los valores hat:
+```{r,echo = FALSE}
+hat = hatvalues(regresion2)
+n = length(hat)
+c = 2.5*(3+1)/n
+cat("Criterio de Influencia: ",c,"\n\n")
+cat("Datos Influyentes:\n")
+for (i in 1:n){
+  if (hat[i]>c){
+    print(hat[i])
+  }
+}
+```
+
+Segun el metodo de Cook:
+```{r}
+influencePlot(regresion2,id=TRUE)
+```
+
+## E. Calcule:
+
+### 1. Intervalos de confianza para los coeficientes de regresión
+```{r}
+confint(regresion2)
+```
+
+### 2. Intervalos de confianza para la respuesta media de la regresión
+```{r}
+resmed=predict(regresion2, interval = "confidence")
+head(resmed)
+```
+
+### 3. Intervalos de predicción
+```{r,warning=FALSE}
+pred=predict(regresion2, interval = "prediction")
+head(pred)
+```
+
+## F. Interpreta los resultados desde la perspectiva estadística y en el contexto del problema.
+
+Los intervalos de confianza para los coeficientes de regresión muestran la incertidumbre alrededor de estos valores estimados. Si los intervalos incluyen el cero, esos coeficientes podrían no ser significativos para predecir el precio de los carros.
+
+Los intervalos de confianza para la respuesta media indican dónde se espera que estén los precios promedio de los carros con un 95% de confianza.
+
+Los intervalos de predicción dan un rango esperado para los precios individuales de los carros con un 95% de confianza.
+
+En resumen, estos intervalos revelan la incertidumbre alrededor de los coeficientes, ofrecen estimaciones para precios promedio y predicen el rango esperado de precios individuales de los carros.
+
+# Problema 3
+```{r,echo=FALSE}
+pagina1 = c(164,172,177,156)
+pagina2 = c(178,191,182,185)
+pagina3 = c(175,193,171,163)
+pagina4 = c(155,166,164,170)
+
+datos = data.frame(pagina1,pagina2,pagina3,pagina4)
+head(datos)
+```
+
+## A.Realice un gráfico de caja y bigotes para la adherencia por sitio web.
+```{r}
+boxplot(datos,main = "Adherencia por sitio web",xlab = "Sitio web",ylab = "Adherencia",col = c("red","blue","green","yellow"))
+
+
+```
+
+## B. Estime la media para la adherencia en cada sitio web.
+```{r}
+cat("Media adherencia pagina 1:",mean(datos$pagina1))
+cat("\nMedia adherencia pagina 2:",mean(datos$pagina2))
+cat("\nMedia adherencia pagina 3:",mean(datos$pagina3))
+cat("\nMedia adherencia pagina 4:",mean(datos$pagina4))
+```
+
+## C. Obtenga los intervalos de confianza para la adherencia media en cada sitio.
+```{r}
+cat("Intervalo de confianza adherencia pagina 1: [",t.test(datos$pagina1)$conf.int,"]")
+```
+
+## D. Realice el análisis de varianza con un nivel de significancia de 0.05
+```{r}
+anova_data = data.frame(ad = c(datos$pagina1,datos$pagina2,datos$pagina3,datos$pagina4),pagina = c(rep("pagina1",4),rep("pagina2",4),rep("pagina3",4),rep("pagina4",4)))
+anova = aov(ad~pagina,data = anova_data)
+summary(anova)
+```
+
+Debido a que se tiene un valor p de 0.0314, y es menor al alfa de 0.05, se rechaza la hipotesis nula y se concluye que al menos una de las medias es diferente.
+
+## E. Analiza la validez del modelo. Comprueba:
+
+### 1. Normalidad
+```{r}
+shapiro.test(anova$residuals)
+```
+
+Debido a que el valor p es mucho mayor al alfa de 0.05 con un valor de 0.9728, no se rechaza la hipotesis nula y se concluye que los residuos siguen una distribución normal.
+
+### 2. Homocedasticidad
+```{r}
+bptest(anova)
+```
+
+Debido a que el valor p es mayor al alfa de 0.05 con un valor de 0.2759, no se rechaza la hipotesis nula y se concluye que la varianza de los errores es constante.
+
+### 3. Independencia
+```{r}
+dwtest(anova)
+```
+
+Debido a que el valor p es mayor al alfa de 0.05 con un valor de 0.1759, no se rechaza la hipotesis nula y se concluye que los residuos son independientes.
+
+## F. Interpreta el resultado desde la perspectiva estadística y en el contexto del problema.
+
+Debido a que se rechazo la hipotesis nula en el analisis de varianza, se concluye que al menos una de las medias es diferente, y se puede ver en el gráfico de caja y bigotes que la media de la pagina 2 es mayor a las demás.
+
+Tambien vemos que al validar los modelos, el modelo paso todos los supuestos por lo que es confiable.
+
+# Problema 4
+```{r}
+data = wine
+
+data$Class = ifelse(data$Type == 1,"one",ifelse(data$Type == 2,"two",ifelse(data$Type==3,"three",data$Type)))
+
+head(data)
+```
+
+## A. Mediante un análisis discriminante realice una clasificación de la base de datos en los 3 diferentes grupos asociados los tipos de cultivares de vino.
+
+```{r}
+library(ggplot2)
+#Asignamos un color a cada especie
+color = c(one="blue",two="green",three="orange")
+color
+
+#Creamos un vector con el color corresponidente a cada observacion de acuerdo a la columna Species
+col.ind=color[data$Class]
+plot(data[2:5],pch=21,bg=col.ind,col="gray")
+```
+
+```{r}
+plot(data[6:10],pch=21,bg=col.ind,col="gray")
+```
+
+```{r}
+plot(data[11:14],pch=21,bg=col.ind,col="gray")
+```
+
+Debido a como se ve que las variables discriminan a los datos, usaremos las ultimas 4 variables para nuestro análisis discriminante. Las variables son Color, Hue, Dilution, Proline.
+
+```{r}
+new_data = data[,c(1,11,12,13,14)]
+head(new_data)
+```
+
+```{r}
+discriminante = lda(Type~.,data = new_data)
+discriminante
+```
+
+## B. Escriba las funciones discriminantes implementadas por el modelo y el porcentaje de clasificación asociado a cada una de éstas.
+
+$LD1  = -0.166*Color+ 2.089*Hue + 1.861*Dilution+ 0.004*Proline$
+
+$LD2  = -0.314*Color+ 2.431*Hue + 0.231*Dilution- 0.004*Proline$
+
+El LD1 representa el 68.8% de la clasificación y el LD2 el 31.1% de la clasificación.
+
+## C. Represente con histogramas la distribución de los valores asociados por cada función discriminante en cada categoría.
+
+### LD1
+```{r, echo=FALSE}
+prediccion = predict(discriminante)
+ldahist(data=prediccion$x[,1], g=data$Type, type="both")
+```
+
+### LD2
+```{r, echo=FALSE}
+ldahist(data=prediccion$x[,2], g=data$Type, type="both")
+```
+
+## D. Represente visualmente sus resultados mediante un gráfico de dispersión con las funciones discriminantes.
+```{r,echo = FALSE}
+plot(LD2~LD1,data = prediccion$x, col = color[data$Class],main = "Funciones discriminantes",pch=21)
+```
+
+Podemos ver en el gráfico que las funciones discriminantes separan bien los datos, por lo que podemos concluir que el análisis discriminante es bueno para este caso.
+
+## E. Determine la precisión del modelo.
+```{r}
+table(data$Class,prediccion$class)
+```
+
+```{r}
+cat("El porcentaje de precision es: ",mean(prediccion$class == data$Class)*100,"%")
+```
+
+Debido a que la precision es del 96%, este es un buen modelo.
+
+
+
+# Problema 5
+```{r,echo = FALSE}
+library(mlbench)
+data = read.csv("PimaIndiansDiabetes2.csv")
+head(data)
+```
+
+## A. Prepare la base de datos omitiendo los datos faltantes.
+```{r}
+data = na.omit(data)
+head(data)
+# CHange diabetes values from neg and pos to 0 and 1
+data$diabetes = ifelse(data$diabetes == "neg",0,1)
+```
+
+## B. Divida el conjunto de datos en un conjunto de entrenamiento (80%) y un conjunto de prueba(20%)
+```{r,warning=FALSE}
+library(caret)
+set.seed(123)
+inTrain = createDataPartition(data$diabetes, p = 0.8, list = FALSE)
+training = data[inTrain,]
+testing = data[-inTrain,]
+```
+
+## C. Considerando Diabetes como variable dependiente, formule un modelo de regresión logarítmica con el cual predecir la probabilidad de que un paciente sea positivo para diabetes basado en la concentración de glucosa.
+```{r}
+modelo = glm(diabetes~glucose,family = binomial(link = "logit"),data = training)
+summary(modelo)
+```
+
+## D. Grafique la curva de regresión logística.
+```{r,echo=FALSE}
+valores = seq(min(training$glucose), max(training$glucose))
+
+prob = predict(modelo, newdata = data.frame(glucose = valores), type = "response")
+
+plot(testing$glucose, as.numeric(testing$diabetes) - 1, pch = 1, col = "blue", xlab = "Glucosa", ylab = "Diabetes", main = "Regresión Logística")
+lines(valores, prob, col = "black", lwd = 2)
+legend("topright", legend = c("Data", "Regresión Logística"), col = c("blue", "black"), lwd = 2)
+```
+
+## E. Ajuste un modelo de regresión logística múltiple. Justifique la selección de las variables predictoras.
+```{r}
+modelo2 = glm(diabetes~glucose+insulin+pressure+mass,family = binomial(link = "logit"),data = training)
+summary(modelo2)
+
+```
+
+Se usaron estas variables predictoras debido a la relacion que se cree que se tiene entre la insulina y la diabetes, y la concepcion que hay de que la presion y el peso tienen algo que ver con la diabetes.
+
+## F. Evalúe el rendimiento del modelo sobre los individuos del conjunto de prueba.
+```{r}
+prediccion = predict(modelo2, newdata = testing, type = "response")
+prediccion = ifelse(prediccion > 0.5, 1, 0)
+conf =table(testing$diabetes, prediccion)
+conf
+```
+
+```{r}
+acc = sum(diag(conf))/sum(conf)
+cat("El porcentaje de exactitud es: ",acc*100,"%")
+```
+
+Este no es un gran modelo, pero tiene algunas predicciones buenas. El porcentaje de exactitud es del 75%.

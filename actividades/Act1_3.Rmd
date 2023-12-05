@@ -1,0 +1,297 @@
+---
+title: "Actividad 1.3 Normalidad univariada. Transformaciones para normalidad"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo =FALSE}
+library(lmtest)
+library(e1071)
+library(MASS)
+library(nortest)
+library(VGAM)
+library(tseries)
+library(outliers)
+```
+
+# Parte 2
+
+```{r cars}
+y = cars$dist
+x= cars$speed
+```
+
+## 1. Normalidad
+
+### Valor de lambda (Box-Cox)
+```{r}
+bc =boxcox(lm(y~x))
+l = bc$x[which.max(bc$y)]
+l
+```
+
+La transformacion aproximada es $d_1 = \sqrt{d}$, o el valor exacto es:
+$d_2 = \frac{d^{0.42}-1}{0.42}$.
+
+### Comparación de medidas
+
+```{r}
+dist1= sqrt(y)
+dist2 = (((y)^l)-1)/l
+m0=round(c(as.numeric(summary(y)),kurtosis(y),skewness(y)),3)
+m1=round(c(as.numeric(summary(dist1)),kurtosis(dist1),skewness(dist1)),3)
+m2=round(c(as.numeric(summary(dist2)),kurtosis(dist2),skewness(dist2)),3)
+m<-as.data.frame(rbind(m0,m1,m2))
+row.names(m)=c("Original","Primer modelo","Segundo Modelo")
+names(m)=c("Minimo","Q1","Mediana","Media","Q3","Máximo","Curtosis","Sesgo")
+m
+```
+
+En las medidas de los 3 vectores de datos se pueden ver grandes diferencias, las más notables son la conversión a datos mucho más chicos en las transformaciones, para lo que también al buscar una distribución normal se acercaron más las medias y medianas de los 2 modelos nuevos por lo que se pueden esperar mejores resultados. También se puede ver una disminución grande en el sesgo de los datos comparado a los datos originales.
+
+### Histogramas de las transformaciones obtenidas, comparando con el original
+```{r}
+par(mfrow=c(3,1))
+hist(dist1,col=0,main="Histograma dist1")
+hist(dist2,col=0,main="Histograma dist2")
+hist(y,col=0,main="Histograma de distancia")
+```
+
+### Pruebas de normalidad
+
+$H_0$: Los datos tienen una distribución normal.
+$H_1$: Los datos no tienen una distribución normal.
+
+$\alpha$: 0.05
+
+```{r}
+D0 =ad.test(y)
+D1 = ad.test(dist1)
+D2 = ad.test(dist2)
+```
+
+
+```{r}
+m0=round(as.numeric(D0$p.value),3)
+m1=round(as.numeric(D1$p.value),3)
+m2=round(as.numeric(D2$p.value),3)
+m<-as.data.frame(rbind(m0,m1,m2))
+row.names(m)=c("Original","Primer modelo","Segundo Modelo")
+names(m)="Valor p"
+m
+```
+
+Con la prueba de Anderson-Darling, como se puede ver en la tabla se consiguieron los valores p de 0.05 en los datos originales, 0.973 en el primer modelo con la transformación aproximada, y de 0.972 con la transformaión exacta. Se ve con esta prueba que la transformacón aproximada nos da un valor p más alto. 
+
+Pero con estas 2 transformaciones no tenemos suficiente evidencia para rechazar $H_0$, por lo que se concluye que tienen una distribución normal.
+
+```{r}
+J0 =jarque.bera.test(y)
+J1 = jarque.bera.test(dist1)
+J2 = jarque.bera.test(dist2)
+```
+
+
+```{r}
+m0=round(as.numeric(J0$p.value),3)
+m1=round(as.numeric(J1$p.value),3)
+m2=round(as.numeric(J2$p.value),3)
+m<-as.data.frame(rbind(m0,m1,m2))
+row.names(m)=c("Original","Primer modelo","Segundo Modelo")
+names(m)="Valor p"
+m
+```
+
+Al igual que la prueba anterior, con la prueba de Jarque Bera, se pueden ver las diferencias del pvalue en las 3 bases de datos, las 2 transformaciones siendo las que no tienen evidencia para rechazar $H_0$, y las que presentan una distribución normal. También como la prueba pasada se ve que el primer modelo, el cuál es el aproximado, salió con el mejor pvalue.
+
+### Anomalías
+
+```{r, echo=FALSE}
+boxplot(y,col="red")
+boxplot(dist1,col="blue")
+boxplot(dist2,col="yellow")
+```
+
+En los boxplots se puede ver solo un punto de anomalía en cada uno.
+
+## 2. Yeo Johnson
+
+### Maximizacion del valor p
+
+```{r}
+lp<- seq(0,1,0.001)
+nlp <- length(lp)
+n = length(y)
+D <- matrix(as.numeric(NA),ncol = 2,nrow=nlp)
+d<- NA
+for (i in 1:nlp){
+  d= yeo.johnson(y, lambda = lp[i])
+  p=ad.test(d)
+  D[i,]=c(lp[i],p$p.value)}
+N=as.data.frame(D)
+plot(N$V1,N$V2,
+type="l",col="darkred",lwd=3,
+xlab="Lambda",
+ylab="Valor p (Normalidad)")
+```
+
+## 3. Mejor Transformación
+
+```{r}
+G=data.frame(subset(N,N$V2==max(N$V2)))
+l=G[,"V1"]
+p = G[,"V2"]
+cat("Lambda con el valor p más alto:",l)
+cat("\nSu valor p:",p)
+dist3 = yeo.johnson(y,lambda=l)
+```
+
+Se encontró la lambda de 0.438, que tuvo el valor p más alto en la prueba de Anderson-Darling, con un valor de 0.979, esto se hizo iterando sobre todos los valores posibles de lambda entre 0 y 1. La ecuación de la transformación de Yeo Johnson es $d_3=\frac{(d+1)^{0.438}-1}{0.438}$
+
+```{r}
+ad.test(dist3)
+jarque.bera.test(dist3)
+```
+
+```{r}
+par(mfrow=c(2,1))
+hist(dist3,col=0,main="Histograma de dist3")
+hist(dist1,col=0,main="Histograma de dist1")
+```
+
+Con la transformación de Yeo Johnson, pudimos observar que tuvo pvalues muy altas, y al igual que las otras transformaciones, debido a que rechazamos $H_0$ se concluye una distribución normal, pero a diferencia de las otras transformaciones debido a que tiene el pvalue más alto, podemos asumir que esta es la mejor transformación, buscando una distribución normal.
+
+## 4. Regresión Lineal Simple
+
+### Modelo de Regresión Lineal transformación vs datos originales
+
+```{r}
+A =lm(dist3~y)
+A
+```
+
+El modelo de regresión lineal simple con la mejor transformación es $d_3 = 3.9890 + 0.1202d$
+
+```{r}
+plot( y, dist3 ,col ="red",ylab ="Distancia modelo 3",xlab = "Distancia Original" ,main = "Regresion lineal entre d y d3" )
+abline(A, col="blue" , lwd="2")
+text( 20 , 15, "d3 = 3.9890 + 0.1202d")
+```
+
+### Modelo de Regresión Lineal transformación vs velocidad
+
+```{r}
+B=lm(dist3~x)
+B
+```
+
+
+
+El modelo de regresión lineal simple para la transformación $d_3$ en función de la velocidad $x$ es $d_3 = 1.3390 + 0.5075x$, este modelo se puede ver en la siguiente gráfica
+
+```{r}
+plot( x, dist3 ,col ="red",ylab ="Distancia modelo 3",xlab = "Velocidad" ,main = "Regresion lineal entre d3 y x" )
+abline(B, col="blue" , lwd="2")
+text( 7 , 15, "d3 = 1.3390 + 0.5075x")
+```
+
+```{r}
+summary(B)
+```
+
+El modelo de regresión es significativo en su conjunto, ya que el valor F y el bajo pvalue de 1.469e-14 indican que la variable predictora de la velocidad tiene un efecto significativo en la variable de respuesta que es la distancia transformada.
+
+El coeficiente de determinación es 0.7117, lo que significa que alrededor del 71% de la variabilidad en la variable de respuesta es explicada por la variable predictora.
+
+En resumen, el modelo es significativo, explica bien los datos y la variable de velocidad es una influencia significativa en la variable de respuesta.
+
+## Validez del modelo
+
+#### **Normalidad**
+
+$H_0:$ Los residuos siguen una distribución normal.
+$H_1:$ Los residuos no siguen una distribución normal.
+
+```{r}
+ad.test(residuals(B))
+```
+```{r}
+qqnorm(residuals(B))
+qqline(residuals(B))
+```
+
+Al hacer la prueba de Anderson-Darling para verificar normalidad, se obtuvo un pvalue de 0.4143, el cual es mayor que el $\alpha$ por lo que no se rechaza $H_0$ y se concluye que los residuos del modelo sí cumplen una distribución normal.
+
+
+#### **Homocedasticidad**
+
+$H_0:$ La varianza de los errores es constante.
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(B)
+```
+
+Debido a que el pvalue en la prueba Breusch-Pagan es muy alto con 0.916, no se tiene suficiente evidencia para rechazar la hipótesis nula, y se concluye que la varianza de los errores no es constante, es variable.
+
+#### **Independencia**
+
+$H_0:$ autocorrelacion en los residuos $= 0$
+$H_1:$ autocorrelacion en los residuos $\neq 0$
+
+```{r}
+dwtest(B)
+```
+```{r}
+plot(residuals(B))
+abline(h=0,col="purple",lwd=2)
+```
+
+El pvalue de nuestra prueba Durbin-Watson es alto, con un valor de 0.3772, sabiendo esto no podemos rechazar la hipótesis nula y se concluye que si hay autocorrelación en los residuos de nuestro modelo. Esto significa que los residuos tienen independencia.
+
+#### **Outliers**
+
+```{r}
+z <- abs(scale(residuals(B)))
+at <- which(z >2)
+plot(B, which = 4)
+```
+```{r, echo=FALSE}
+at
+```
+
+En el gráfico de valores de Cook se puede ver que las observaciones influyentes son las observaciones 1, 23, y la 49, y según el z score, el único valor atípico que se encontró fue el de la observación 23. Esto significa que estas observaciones pueden tener un impacto significativo en el modelo ya que los valores atípicos no están dentro de la tendencia general de los datos , y las influyentes tienen una proporción más grande de influencia sobre el modelo alterandolo más que las demás observaciones. Estas observaciones se tienen que considerar al analizar el modelo.
+
+## Modelo NO Lineal
+
+d: distancia
+
+x: speed
+
+Función de la mejor transformación (Yeo Johnson): $d_3=\frac{(d+1)^{0.438}-1}{0.438}$
+
+Función modelo lineal d3 vs speed: $d_3 = 1.3390 + 0.5075x$
+
+Al igualar ambas funciones, tenemos lo siguiente: $\frac{(d+1)^{0.438}-1}{0.438} = 1.3390 + 0.5075x$, esto nos da el siguiente modelo no lineal:
+
+$d=-0.1519 (6.5849 - (3.6221 + 0.5075 x)^{2.2831})$
+
+```{r}
+func_d = function(x){return(-0.1519 *(6.5849 - (3.6221 + 0.5075*x)^2.2831))}
+val_y= sapply(x,func_d)
+plot(x,val_y,xlab="Velocidad",ylab="Distancia",main="Gráfica modelo NO lineal (distancia vs velocidad)",col = "orange",type = "l",lwd = 3)
+text( 15 , 80, "d= -0.1519(6.5849-(3.6221+0.5075x)^2.2831)")
+```
+
+## 5. Conclusiones
+
+En esta actividad se hicieron transformaciones con 2 diferentes métodos, usando las transformaciones de Box-Cox y consiguiendo su lambda con el pvalue de normalidad más alto, y también se usaron las transformaciones de Yeo Johnson, de la cual también sacamos su mejor lambda. De estos 2 métodos terminamos encontrando que el que daba mejores resultados era el de Yeo Johnson debido a su pvalue tan alta.
+
+Probamos esta transformación con un modelo de regresión lineal, revisando diferentes elementos, como sus medidas generales, la independencia, normalidad y homocedasticidad de sus residuos para poder hacer un análisis completo del modelo creado. 
+
+En resumen se pudo aprender sobre las transformaciones, y lo importante que son para poder usar datos de manera más fácil, y con estas crear modelos válidos. Pudimos comparar diferentes transformaciones, y sus métodos aproximados y exactos para tener una imagen completa del tema, al igual que aprender sobre hacer modelos de calidad..

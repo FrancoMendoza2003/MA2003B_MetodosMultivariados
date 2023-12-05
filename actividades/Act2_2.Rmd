@@ -1,0 +1,233 @@
+---
+title: 'Actividad 2.2 Análisis de varianza: Resistencia'
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+df= read.csv(file="resistencia.csv")
+df$Concentracion = as.factor(df$Concentracion)
+```
+
+```{r}
+c5 = subset(df$Resistencia,df$Concentracion==5)
+c10 = subset(df$Resistencia,df$Concentracion==10)
+c15 = subset(df$Resistencia,df$Concentracion==15)
+c20 = subset(df$Resistencia,df$Concentracion==20)
+
+data <- data.frame(Concentracion_5 = c5, Concentracion_10 = c10, Concentracion_15 = c15, Concentracion_20 = c20)
+
+names(data) <- c("5", "10", "15", "20")  
+
+head(data)
+```
+
+# 1. Analisis Exploratorio
+
+### **Medias**
+```{r}
+for (i in names(data)){
+  cat("La media en la concentracion",i," es de ",mean(data[,i]),"\n")
+}
+```
+
+### **Boxplots**
+```{r}
+boxplot(data,col=c("red","blue","green","yellow"),main="Boxplots de cada concentracion",xlab="Concentraciones",ylab="Resistencia" )
+```
+
+En estos boxplots, los podemos comparar y observar que hay medias parecidas como las de 10 y 15, 15 teniendo poca variabilidad y las otras 3 teniendo datos mucho mas variables. En si a simple vista se ven diferentes las medias, pero se teiene que comprobar.
+
+# 2. Hipótesis estadística
+
+$H_0$: Todas las medias son iguales
+
+$H_1$: Al menos hay una media diferente
+
+Nivel de significancia (alfa) : 0.05
+
+```{r}
+alfa = 0.05
+```
+
+# 3. ANOVA: Suma de cuadrados medios
+
+```{r}
+SSTR = 0
+SSE = 0
+TSS = 0
+for (i in names(data)){
+  SSTR=SSTR+(mean(data[,i])-mean(colMeans(data)))^2
+}
+SSTR =SSTR*nrow(data)
+
+for (i in names(data)) {
+  for (j in data[[i]]) {
+    SSE = SSE + (j - mean(data[[i]]))^2
+  }
+}
+
+for (i in names(data)) {
+  for (j in data[[i]]) {
+    TSS = TSS + (j - mean(colMeans(data)))^2
+  }
+}
+MSTR = SSTR/(ncol(data)-1)
+MSE = SSE/(ncol(data)*(nrow(data)-1))
+f = MSTR/MSE
+crit=qf(1-alfa,ncol(data)-1,ncol(data)*(nrow(data)-1))
+ANOVA = data.frame(
+  Medida = c("SSTr (Inter grupos)","SSE (Intra grupos)","TSS (Total)","MSTR (Inter grupos)","MSE (Intra grupos)","f (Inter grupos)","Regla de decisión"),
+  Valor = c(SSTR,SSE,TSS,MSTR,MSE,f,crit)
+)
+ANOVA
+```
+
+Como se puede ver en la tabla, el valor f es mayor al de la regla de decisión, por lo que se tiene suficiente evidencia para rechazar $H_0$, lo que nos dice que al menos una de las medias es diferente, no todas son iguales.
+
+# 4. ANOVA en R
+
+```{r}
+mod_lm = lm(df$Resistencia~df$Concentracion)
+anova_r = aov(df$Resistencia~df$Concentracion)
+summary(anova_r)
+```
+
+En el ANOVA con R se ve que se dieron los mismos resultados que calculados manualmente, lo que nos muestra que se hizo de manera correcta.
+En cuanto a las hipótesis, confirmamos lo que se mencionó previamente de rechazar $H_0$ debido al bajo valor de la p, siendo $3.59*10^{-6}$, lo cuál es menor al valor de $\alpha$ establecido como 0.05. Terminamos con la misma conclusión de que no todas las medias de las poblaciones son iguales.
+
+# 5. Diferencias por pares
+
+```{r}
+TukeyHSD(anova_r)
+```
+
+```{r,echo=FALSE}
+tuk_plot <- function (x, xlab, ylab, ylabels = NULL, ...) {
+  for (i in seq_along(x)) {
+    xi <- x[[i]][, -4L, drop = FALSE]
+    yvals <- nrow(xi):1L
+    dev.hold()
+    on.exit(dev.flush())
+    plot(c(xi[, "lwr"], xi[, "upr"]), rep.int(yvals, 2L), 
+         type = "n", axes = FALSE, xlab = "", ylab = "", main = NULL, 
+         ...)
+    axis(1, ...)
+    # change for custom axis labels
+    if (is.null(ylabels)) ylabels <- dimnames(xi)[[1L]]
+
+    axis(2, at = nrow(xi):1, labels = ylabels, 
+         srt = 0, ...)
+    abline(h = yvals, lty = 1, lwd = 0.5, col = "lightgray")
+    abline(v = 0, lty = 2, lwd = 0.5, ...)
+    segments(xi[, "lwr"], yvals, xi[, "upr"], yvals, ...)
+    segments(as.vector(xi), rep.int(yvals - 0.1, 3L), as.vector(xi), 
+             rep.int(yvals + 0.1, 3L), ...)
+    title(main = paste0(format(100 * attr(x, "conf.level"), 
+                               digits = 2L), "% family-wise confidence level\n"), 
+          # change for custom axis titles
+          xlab = xlab, ylab = ylab)
+
+    box()
+    dev.flush()
+    on.exit()
+  }
+}
+```
+
+
+```{r}
+tukey = TukeyHSD(anova_r,conf.level=1-alfa)
+#plot(tukey,cex.axis=0.6,main="Prueba Tukey de diferencia de medias de las concentraciones",xlab="Diferencia de medias",ylab="Combinaciones de medias")
+tuk_plot(tukey,"Diferencia de medias","Combinaciones de medias")
+```
+
+La prueba anterior hace la comparación de todas las combinaciones de diferencias de medias, y en la prueba con los valores de p ajustados pudimos ver que uno de los pares que podría considerarse que puede tener una media igual es la de 15 y 10 debido a su pvalue tan alto y en la gráfica sobrepasa la diferencia de 0 entre las 2 medias. Pero siendo que todas las demás son diferentes, nos quedamos con la conclusión de que se tiene que rechazar $H_0$.
+
+# 6. Validación de supuestos
+
+## Normalidad
+
+$H_0:$ Los residuos siguen una distribución normal.
+
+$H_1:$ Los residuos no siguen una distribución normal.
+
+```{r}
+library(nortest)
+library(lmtest)
+shapiro.test(residuals(anova_r))
+```
+
+```{r}
+qqnorm(residuals(anova_r),main="Q-Q plot",ylab="Cuantiles de los datos",xlab="Cuantiles Teoricos")
+qqline(residuals(anova_r),col="red")
+```
+
+```{r}
+hist(residuals(anova_r),main="Histograma del anova",xlab="Residuos del anova",ylab="Frecuencia")
+```
+
+Para revisar la normalidad de los residuos se hizo la prueba de Anderson-Darling, y se obtuvo un pvalue de 0.5757, el cual es mayor que el $\alpha$ por lo que no podemos rechazar $H_0$ y se concluye que los residuos sí cumplen una distribución normal.
+
+## Homocedasticidad
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(anova_r)
+```
+
+```{r}
+fisher.test(table(df))
+```
+
+Con la prueba de Breusch-Pagan podemos concluir que no hay suficiente evidencia para rechazar la hipótesis nula de homocedasticidad. Esto sugiere que los datos podrían tener una varianza constante en los diferentes niveles de las variables.
+
+Y con la prueba de Fisher tampoco se puede rechazar la hipótesis nula, esto es debido a su alto pvalue de $0.9662$, esto nos sirve para concluir lo mismo de que la varianza de los errores no es constante. 
+
+## Independencia
+$H_0:$ autocorrelacion en los residuos $= 0$
+
+$H_1:$ autocorrelacion en los residuos $\neq 0$
+
+```{r}
+dwtest(anova_r)
+```
+
+Debido a que el pvalue es de 0.424 y mayor que $\alpha$, esto significa que no se rechaza $H_0$. Esto significa que no hay suficiente evidencia para decir que no hay autocorrelación en los residuos del modelo de regresión, lo que nos dice que hay independencia entre los residuos. En la siguiente gráfica se puede ver que los residuos están distribuidos de manera independiente del otro.
+
+```{r}
+plot(residuals(anova_r),main="Residuos del anova",xlab="Observación",ylab="Residuos")
+abline(h=0,col="blue",lwd=2)
+```
+
+# 7. Intervalos de confianza
+
+```{r}
+for (col in names(data)) {
+  result <- t.test(data[[col]])
+  
+  cat("Concentración:", col, "\n")
+  cat("Intervalo de confianza del 95% para la media de resistencia:[", 
+      result$conf.int, "]\n\n")
+}
+
+```
+
+Estos resultados podrían implicar que la concentración de madera dura puede influir en la resistencia del material, siendo la concentración de 15 la que muestra una resistencia más consistente, en comparación con las otras concentraciones evaluadas en este estudio. 
+Se puede ver que la concentracion de 5 muestra una alta variabilidad en las mediciones, al igual que en el de 20. Las concentraciones de 10 y 15 son más estrechos y tienen mayor precisión, la de 15 siendo la más estrecha de todas.
+
+# 8. Conclusión
+
+Con las pruebas estadísticas utilizadas pudimos llegar a diferentes conclusiones, la principal siendo comprobar si todas las medias de esta base de datos son iguales, para loq ue llegamos a concluir que no. 
+
+También pudimos observar como funciona el ANOVA, y la comparación inter grupos e intra grupos de ella. También pudimos ver las diferentes combinaciones de diferencias de medias en los diferentes pares de concentraciones con lo que pudimos ver que una de ellas si tenía una diferenencia de medias no significativa, la 10 y 15. 
+Hicimos otras diferentes pruebas con los residuos del modelo, en donde pudimos observar normalidad en la distribución, homocedasticidad, y autocorrelación en ellos.
+
+Podemos concluir que la concentración de madera dura si hace diferencia en la resistencia de el papel creado.

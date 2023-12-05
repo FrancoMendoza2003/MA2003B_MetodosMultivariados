@@ -1,0 +1,231 @@
+---
+title: "Actividad 1.11 Series de tiempo estacionarias"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problema 1
+
+Usa los datos de las ventas de gasolina en una estación de servicio para analizar modelos de pronósticos de la  serie de tiempo:
+
+```{r}
+semana = seq(1,12)
+ventas_gasolina <- c(17, 21, 19, 23, 18, 16, 20, 18, 22, 20, 15, 22)
+
+df1 = data.frame(semana,ventas_gasolina)
+df2=data.frame(semana,ventas_gasolina)
+df3 = data.frame(semana,ventas_gasolina)
+plot(df1,main = "Venta de gasolina por semana",ylab = "Gasolina (miles)",xlab = "Semana",type='b',col="red")
+```
+
+## Promedios móviles
+```{r}
+p = 3
+movil = c()
+
+for (i in 1:length(semana)){
+  if (i<=p){
+    movil = c(movil,NA)
+  }
+  else {
+    movil = c(movil,mean(ventas_gasolina[(i-p):(i-1)]))
+  }
+  
+}
+df1$Promedio_Movil = movil
+```
+
+### Errores
+```{r}
+n =12
+error = df1$ventas_gasolina-df1$Promedio_Movil
+error_cuadrado = error^2
+error_porcentual = abs((error/ventas_gasolina)*100)
+
+df1$Error = error
+df1$Error_Cuadrado = error_cuadrado
+df1$Error_Porcentual = error_porcentual
+
+CME <- sum(error_cuadrado[(p+1):n])/(n-p) 
+EPAM <- sum(error_porcentual[(p+1):n])/(n-p)
+cat("El promedio de los cuadrados de los errores es:",CME)
+cat("\n\nEl promedio de los errores porcentuales es:",EPAM,"%")
+df1
+```
+
+
+## Promedios móviles ponderados
+```{r}
+pesos <- c(1/6, 2/6, 3/6)
+promedio_pond <- c()
+
+for (i in 1:length(semana)){
+  if (i<=p){
+    promedio_pond = c(promedio_pond,NA)
+  }
+  else{
+    promedio_pond = c(promedio_pond,sum(ventas_gasolina[(i-p):(i-1)]*pesos))
+  }
+}
+df2$Promedio_Ponderado = promedio_pond
+```
+
+### Errores
+```{r}
+n =12
+error = df2$ventas_gasolina-df2$Promedio_Ponderado
+error_cuadrado = error^2
+error_porcentual = abs((error/ventas_gasolina)*100)
+
+df2$Error = error
+df2$Error_Cuadrado = error_cuadrado
+df2$Error_Porcentual = error_porcentual
+
+CME <- sum(error_cuadrado[(p+1):n])/(n-p)
+EPAM <- sum(error_porcentual[(p+1):n])/(n-p)
+cat("El promedio de los cuadrados de los errores es:",CME)
+cat("\n\nEl promedio de los errores porcentuales es:",EPAM,"%")
+df2
+```
+
+## Metodo de suavizamiento exponencial
+
+## Alfa Optimo
+```{r}
+alpha_values <- seq(0.1, 0.9, by = 0.1)
+cme_values <- numeric(length(alpha_values))
+
+for (i in 1:length(alpha_values)) {
+  alpha <- alpha_values[i]
+  smooth_exp <- numeric(length = n)
+  smooth_exp[1] <- ventas_gasolina[1]
+  for (j in 2:n) {
+    smooth_exp[j] <- alpha * ventas_gasolina[j - 1] + (1 - alpha) * smooth_exp[j - 1]
+  }
+  residuals <- ventas_gasolina - smooth_exp
+  cme_values[i] <- mean(residuals^2)
+}
+
+best_alpha <- alpha_values[which.min(cme_values)]
+best_alpha
+```
+
+## Suavizamiento con el mejor alfa
+```{r}
+alpha <- 0.2
+
+smooth_exp <- numeric(length = length(ventas_gasolina))
+smooth_exp[1] <- ventas_gasolina[1]
+
+pronosticadas <- c()
+errores <- c()
+error_cuadrado <- c()
+error_porcentual <- c()
+
+for (i in 2:length(ventas_gasolina)) {
+  smooth_exp[i] <- alpha * ventas_gasolina[i - 1] + (1 - alpha) * smooth_exp[i - 1]
+  pronosticadas[i] <- smooth_exp[i]
+  errores[i] <- ventas_gasolina[i] - pronosticadas[i]
+  error_cuadrado[i] <- errores[i]^2
+  error_porcentual[i] <- abs(errores[i] / ventas_gasolina[i]) * 100
+}
+
+
+
+df3$Pronostico = pronosticadas
+df3$Error = errores
+df3$Error_Cuadrado = error_cuadrado
+df3$Error_Porcentual = error_porcentual
+
+CME <- mean(error_cuadrado[-1])  
+EPAM <- mean(error_porcentual[-1])
+cat("El promedio de los cuadrados de los errores es:",CME)
+cat("\n\nEl promedio de los errores porcentuales es:",EPAM,"%")
+df3
+```
+
+Comparando los resultados, un menor valor de CME indica un mejor ajuste del modelo a los datos. En este caso, el suavizado exponencial con un valor de alfa de 0.2 tiene el CME más bajo (8.982231) en comparación con los promedios móviles y ponderados, lo que sugiere que este modelo tiene un mejor ajuste a los datos de venta de gasolina.
+
+Además, el error porcentual promedio (EPAM) también es menor en el modelo de suavizado exponencial, lo que indica que este modelo tiene un menor error porcentual en la predicción de las ventas.
+
+Por lo tanto, según los resultados, el modelo de suavizado exponencial con alfa de 0.2 parece ser el más efectivo para predecir la venta de gasolina en comparación con los promedios móviles y ponderados.
+
+## Prediccion para la semana 13
+```{r,echo =FALSE}
+pred_semana_13 <- best_alpha * ventas_gasolina[length(ventas_gasolina)] + (1 - best_alpha) * smooth_exp[length(smooth_exp)]
+cat("Usando el metodo de suavizamiento, el valor predicho para miles de galones\n de gasolina para la semana 13 es:",pred_semana_13)
+```
+
+# Problema 2
+```{r}
+anio = rep(seq(1,4),each=4)
+tri = rep(seq(1,4),times=4)
+ventas = c(4.8,4.1,6,6.5,5.8,5.2,6.8,7.4,6,5.6,7.5,7.8,6.3,5.9,8,8.4)
+df= data.frame(
+  Año = anio,
+  Trimestre = tri,
+  Ventas = ventas
+)
+df
+```
+
+## Analisis de tendencia y estacionalidad
+```{r}
+ts = ts(ventas,frequency = 4)
+decompose = stl(ts,s.window='periodic')
+plot.ts(ts,col ="blue",main = "Ventas trimestrales por año")
+```
+
+```{r}
+plot(decompose,col="red")
+```
+
+Podemos ver la estacionalidad en el modelo, pero tambien como la tendencia es lineal.
+
+## Modelo de regresión lineal con ventas desestacionalizadas
+```{r}
+deestacional = decompose$time.series[,"trend"]+decompose$time.series[,"remainder"]
+tiempo=1:length(deestacional)
+y = deestacional
+A = lm(y~tiempo)
+summary(A)
+```
+
+```{r}
+plot(tiempo,y,col="purple",main ="Modelo de regresion lineal ventas vs tiempo",type="l",ylab = "Ventas (en miles)")
+abline(A,col ="red")
+text(4.5,7.2,"Ventas = 5.15226+0.14459*Trimestre")
+```
+
+El modelo de regresión lineal revela una relación significativa entre el tiempo y las ventas, con un R-cuadrado del 93.13%, indicando que el 93.13% de la variabilidad en las ventas se explica por el tiempo. Cada unidad de aumento en el tiempo está asociada, en promedio, con un incremento de aproximadamente 0.14459 miles en las ventas. Ambos coeficientes son estadísticamente significativos, respaldando la validez del modelo para predecir las ventas en función del tiempo. Este alto nivel de ajuste y la significancia de las variables señalan la efectividad del modelo para explicar y predecir las fluctuaciones en las ventas a lo largo del tiempo.
+
+## Calculo de CME y EPAM de la predicción de la serie de tiempo
+```{r}
+df$Predicciones <- predict(A,newdata = data.frame(tiempo=tiempo))
+
+df$Errores <- df$Ventas - df$Predicciones
+
+CME <- mean(df$Errores^2)
+EPAM <- mean(abs(df$Errores / df$Ventas)) * 100
+cat("El promedio de los cuadrados de los errores es:",CME)
+cat("\n\nEl promedio de los errores porcentuales es:",EPAM,"%")
+df
+```
+
+El modelo exhibe un CME (Error Cuadrático Medio) de 0.6993267 y un EPAM (Error Porcentual Absoluto Medio) del 12.68761%. Estos valores sugieren que el modelo tiene un rendimiento razonable al predecir las ventas. El CME indica que, en promedio, los errores de predicción tienen una magnitud de 0.6993267 miles, mientras que el EPAM muestra que los errores promedio representan aproximadamente el 12.68761% de las ventas reales. Aunque estos errores son relativamente bajos, es crucial considerar el contexto específico y la relevancia del nivel de precisión necesario para el análisis de ventas, así como la comparación con otros modelos alternativos o el ajuste potencial del modelo actual para mejorar su rendimiento predictivo.
+
+## Pronóstico para el siguiente año
+```{r,echo = FALSE}
+f = function(x) {5.15226 + 0.14459*x}
+print("Predicciones de ventas para el año 5, sus cuatro trimestres:")
+f(17)*1000
+f(18)*1000
+f(19)*1000
+f(20)*1000
+```
+

@@ -1,0 +1,307 @@
+---
+title: "Laboratorio 1"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo = FALSE,warning=FALSE}
+library(mnormt)
+library(ggplot2)
+library(MVN)
+library(psych)
+```
+
+# Problema 1
+
+## Descomposición espectral
+```{r}
+A = matrix(c(4.4,0.8,0.8,5.6),nrow = 2,ncol = 2)
+unicos = eigen(A)
+valores = unicos$values
+vectores= unicos$vectors
+
+d1 = vectores[,1]%*% t(vectores[,1])* valores[1]
+d2 = vectores[,2]%*% t(vectores[,2])* valores[2]
+A
+```
+
+```{r,echo = FALSE}
+cat("Descomposición 1:\n\n")
+d1
+cat("\n\nDescomposición 2:\n\n")
+d2
+```
+
+```{r}
+d1+d2
+```
+
+# Problema 2
+
+## Probabilidad
+
+$\mu = (2.5,4)$
+$P(X\leq x), x = (2,3)$
+```{r}
+co = matrix(c(1.2,0,0,2.3),nrow=2,ncol=2)
+mu = c(2.5,4)
+x = c(2,3)
+cat("La probabilidad de que P(X<=x) donde x' = (2,3) es:",pmnorm(x=x,mean=mu,varcov=co))
+```
+
+# Problema 3
+
+## Mahalanobis
+```{r,echo = FALSE}
+df = read.csv("datosX1X2X3.csv")
+head(df)
+```
+
+```{r}
+maha = mahalanobis(df,colMeans(df),cov(df))
+maha
+```
+
+```{r}
+percent = c(seq(10,90,10))
+prop = c()
+for (i in seq_along(percent)){
+  prop[i] = sum(maha< qchisq(percent[i]/100,df = ncol(df)))
+}
+prop = prop/length(maha)
+
+res = data.frame(Percentil = percent, Proporcion = prop)
+plot(res,main = "Chi2 vs Proporcion", type ="both")
+```
+
+Debido a como se ve la grafica, se puede deducir que los datos son normales, esto debido a que se ve como una linea recta, aunque no perfectamente recta.
+
+# Problema 4
+
+```{r}
+mvn(df,mvnTest = "mardia",univariateTest = "SW")$multivariateNormality
+```
+
+### ¿Cuál es el valor p de correspondientes a los Test de sesgo y curtosis de la Prueba de normalidad multivariada de Mardia?
+
+El valor p de la prueba de sesgo multivariada fue de 0.66, y el de curtosis fue de 0.24
+
+```{r}
+mvn(df,mvnTest = "hz",univariateTest = "SW")
+```
+
+### ¿Cual es el valor p  de la prueba de normalidad multivaridad de Henze-Zirkler's? 
+
+El valor pu de la prueba de normalidad multivariada de Henze-Zirkler's fue de 0.503
+
+### A un alfa = 0.05, ¿qué se concluye?
+
+Debido a que el valor p de la prueba de normalidad multivariada de Henze-Zirkler's fue de 0.503, se puede concluir que los datos son normales.
+
+
+# Problema 5
+
+```{r,echo = FALSE}
+data = read.csv("olmos.csv")
+head(data)
+nrow(data)
+```
+
+## A. Realice la prueba de normalidad de Mardia y la prueba de Anderson Darling con las variables X1, X2 y X3 y de la conclusión a un nivel se significación de 0.05. Interprete coeficientes de sesgo y curtosis de Mardia resultantes. Indique qué variables resultaron leptocúrticas, platicúrticas y mesocúrticas. 
+
+```{r}
+X = data[,1:3]
+mvn(X,mvnTest = "mardia",univariateTest = "SW")
+```
+
+En vez de la prueba de Anderson Darling, se utilizo la prueba de Shapiro-Wilk, debido a que hay menos de 50 datos en los datos que se nos dieron.
+
+En las pruebas de normalidad de Mardia, podemos ver que los valores p de las pruebas son mayores a 0.05, por lo que se puede concluir que los datos son normales, tomando en cuenta que $H_0$ es que las variables siguen una distribución normal, y $H_1$ es que las variables no siguen una distribución normal multivariada.
+
+En cuanto a la curtosis de cada variable, podemos ver que la variable Longitud, con un valor de 0.0767, es leptocurtica, la variable Diametro, con un valor de -0.046, es mesocúrtica, y la variable Altura, con un valor de -0.584, es leptocurtica.
+
+1. Mesocúrtica: Similar a una distribución normal estándar, con datos moderadamente distribuidos alrededor de la media.
+2. Leptocúrtica: Más puntiaguda que una distribución normal, con datos concentrados cerca de la media y colas más pesadas.
+3. Platicúrtica: Más aplanada que una distribución normal, con datos dispersos desde la media y colas más ligeras.
+
+
+## B. Elabore la gráfica de contorno de la normal multivariada obtenida  anteriormente. 
+
+### Longitud y Diametro
+```{r}
+mvn(X[1:2], mvnTest ="mardia", multivariatePlot ="contour")$multivariatePlot
+```
+
+```{r}
+mvn(X[1:2], mvnTest ="mardia", multivariatePlot ="persp")$multivariatePlot
+```
+
+### Longitud y Altura
+```{r}
+mvn(X[c(1,3)], mvnTest ="mardia", multivariatePlot ="contour")$multivariatePlot
+```
+
+```{r}
+mvn(X[c(1,3)], mvnTest ="mardia", multivariatePlot ="persp")$multivariatePlot
+```
+
+### Diametro y Altura
+```{r}
+mvn(X[c(2,3)], mvnTest ="mardia", multivariatePlot ="contour")$multivariatePlot
+```
+
+```{r}
+mvn(X[c(2,3)], mvnTest ="mardia", multivariatePlot ="persp")$multivariatePlot
+```
+
+## C. Con el vector de medias y la matriz de covarianza de la normal multivariada en en el inciso A, calcule la probabilidad de que P(X <= (0.25,0.25,0.25))
+```{r}
+mu = colMeans(X)
+co = cov(X)
+x = c(0.25,0.25,0.25)
+cat("La probabilidad de que las 3 variables sean igual a el vector x =",pmnorm(x=x,mean=mu,varcov=co))
+```
+
+## D. Con el total de datos Olmos.csv calcula la distancia de Mahalanobis de cada observación al centroide (vector de medias) con respecto a la matriz de covarianzas. ¿Qué observación está más alejada, según la distancia de Mahalanobis, del centroide?  ¿Qué observación está más cercana? 
+```{r}
+maha = mahalanobis(data,colMeans(data),cov(data))
+cat("La observación más alejada es la número",which.max(maha),"con una distancia de",max(maha))
+cat("\nLa observación más cercana es la número",which.min(maha),"con una distancia de",min(maha))
+```
+
+## E. Aplica un análisis de componentes principales a los datos y con base en al menos tres criterios (por ejemplo, porcentaje de variación acumulada, gráfica de Scree y los valores de las cargas ) determinar cuántos componentes son suficientes para explicar razonablemente la mayoría de la variación.
+```{r}
+pca = prcomp(data,center = TRUE,scale = TRUE)
+varianza_acumulada = cumsum(pca$sdev^2/sum(pca$sdev^2))
+plot(varianza_acumulada,type = "both",main = "Varianza Acumulada")
+```
+
+```{r}
+plot(pca,type = "l",main = "Scree Plot")
+```
+
+```{r}
+# Valores de las cargas
+pca$rotation
+```
+
+En el primer grafico, de el porcentaje de varianza acumulada, podemos ver que con 2 componentes se explica el 95% de la varianza, y con 3 componentes se explica aproximadamente el 98% de la varianza. En el segundo grafico, podemos ver que el codo se forma en el componente23, por lo que se puede decir que a pesar de que con 3 componentes  se explica la mayoría de la varianza, con 2 puede ser mejor debido a que es hasta donde hay mayor cambio en explicacion, y de ahi disminuye. Además, al analizar los valores de carga, se observa cómo cada variable contribuye a la formación de los componentes principales. Por ejemplo, las variables de 'Longitud', 'Diámetro' y 'PesoTotal' muestran cargas similares y considerables en los primeros componentes, lo que sugiere una fuerte relación entre estas medidas físicas. Por otro lado, 'Altura', 'PesoVisceras' y 'PesoCorteza' exhiben cargas notables en diferentes componentes, indicando su influencia en aspectos distintos de la estructura de los datos. Estos valores de carga proporcionan una comprensión detallada de cómo cada atributo original contribuye a la formación de los componentes principales y, por ende, a la explicación de la variabilidad de los datos.
+
+## F. Escribir las combinaciones lineales  de los Componentes principales en función de las variables y cargas obtenidas de los componentes principales resultantes.
+```{r}
+for (i in 1:2){
+  cat("PC",i,"=",round(pca$rotation[,i][1],3),"X1 +",round(pca$rotation[,i][2],3),"X2 +",round(pca$rotation[,i][3],3),"X3",round(pca$rotation[,i][4],3),"X4 +",round(pca$rotation[,i][5],3),"X5 +",round(pca$rotation[,i][6],3),"X6 +",round(pca$rotation[,i][7],3),"X7\n\n")
+}
+
+```
+
+## G. Utilizando los dos primeros componentes hacer una gráfica de dispersión  de las puntuaciones. Comentar el gráfico en función de la variabilidad.
+```{r}
+scores= as.matrix(data) %*% pca$rotation
+model = lm(scores[,2]~scores[,1])
+plot(scores[,1],scores[,2],main = "Scatter Plot",xlab = "PC1",ylab = "PC2")
+abline(model,col="red")
+```
+
+Con este gráfico de dispersión, se puede ver una tendencia negativa entre las 2 componentes, lo que indica que a mayor valor de la componente 1, menor valor de la componente 2. Además, se puede ver que la mayoría de los datos se encuentran en el segundo cuadrante.
+
+## H. Hacer un gráfico vectorial de las variables e interpretar sus relaciones. 
+```{r}
+biplot(pca)
+```
+
+En este gráfico vectorial, se puede ver que todas las variables afectan de gran manera a el primer componente, de manera positiva, mientras que al segundo componente, las variables lo afectan poco, mas que nada Altura, y Peso desvainado son las que mas lo afectan, de manera positiva y negativa respectivamente. Tambien se puede ver que Peso corteza afeca un poco mas que las demas variables positivamente al segundo componente, pero las demas aun afectando poco estan mas del lado negativo o neutral.
+
+# Problema 6
+
+## A. Justifique por qué es adecuado el uso del Análisis factorial (hacer la prueba de esfericidad de Bartlett y KMO).
+```{r}
+data = read.csv("olmos.csv")
+head(data)
+```
+
+```{r}
+cortest.bartlett(data)
+```
+
+```{r}
+KMO(data)
+```
+
+Con el valor p de 2.795635e-77 en la prueba de Bartlett, que demuestra si hay o no hay independencia entre las variables, se puede ver que es menor a 0.05, por lo que se rechaza la hipotesis nula, por lo que es adecuado el uso del analisis factorial. Con el valor de KMO, que demuestra si las variables son adecuadas para el analisis factorial, se puede ver que es mayor a 0.5, por lo que se puede decir que las variables son adecuadas para el analisis factorial.
+
+## B. Justifique el número de factores principales que se utilizarán en el modelo.
+```{r}
+scree(cor(data))
+```
+
+Debido a que el codo se hace en los 2 factores, se usaran 2 factores principales.
+
+## C. Identifique las comunalidades de los factores del modelo propuesto, y los errores: interprete si se necesita un nuevo factor.
+```{r}
+factor = factanal(data,factors = 2,scores = "Bartlett")
+factor
+```
+
+Para 'Longitud', 'Diametro', 'Altura', 'PesoTotal', 'Pesodesvainado', 'Pesovisceras' y 'Pesocorteza', las comunalidades son relativamente altas, oscilando entre 0.005 y 0.229. Esto sugiere que una parte considerable de la varianza de estas variables está siendo explicada por los dos factores extraídos en el modelo.
+
+Los loadings muestran la relación entre las variables originales y los factores. En este caso, los loadings son relativamente altos y sugieren una asociación significativa entre las variables y los dos factores extraídos.
+
+La prueba de chi-cuadrado para determinar si 2 factores son suficientes indica que hay una diferencia significativa entre los datos observados y los datos esperados según el modelo de 2 factores.
+
+En resumen, los dos factores parecen estar explicando una cantidad significativa de la varianza en los datos, ya que la mayoría de las comunalidades son altas y los loadings muestran asociaciones fuertes entre las variables y los factores. Sin embargo, la significancia estadística de la prueba chi-cuadrado sugiere que podría ser beneficioso considerar la inclusión de un tercer factor para capturar mejor la estructura subyacente de los datos. Tambien se tiene que considerar que con 2 factores ya se tiene una varianza acumulada de 0.93, por lo que no es necesario un tercer factor.
+
+## D. Encuentre con ayuda de un gráfico de variables qué conviene más sin rotación o con rotación varimax. (se puede ayudar con la función fa de la librería psych y el gráfico de la función fa.diagram)
+```{r}
+factor_no_rotado = fa(data,nfactors = 2,rotate = "none")
+fa.diagram(factor_no_rotado,main="Analisis Factorial sin rotar")
+```
+
+```{r}
+factor_rotado = fa(data,nfactors = 2,rotate = "varimax")
+fa.diagram(factor_rotado,main="Analisis Factorial con varimax")
+```
+
+En las graficas se puede ver claramente que con la rotacion varimax, los factores estan mas separados, por lo que se puede decir que conviene mas con rotacion varimax, esto porque la explicacion de parte de los 2 componentes es mas clara hacia que variables afectan. Por ejemplo, en el componente 1, se pueden tomar las medidas del pez en mm o cm, y solo pesocorteza destaca, mientras que en el componente 2, se pueden tomar los pesos del pez en gramos o kg.
+
+# Problema 7
+
+```{r}
+Mpre = matrix(c(0,639,606,1181,364,0,0,474,542,350,0,0,0,908,597,0,0,0,0,679,0,0,0,0,0),ncol=5, dimnames= list(c("Barcelona","Madrid","San Sebastian","Sevilla","Valencia"),c("Barcelona","Madrid","San Sebastian","Sevilla","Valencia")))
+M = Mpre + t(Mpre)
+M
+```
+
+## A. Hallar las ultra-distancias (dendrogram-dist) con el método de aglomeración  jerárquica: (1) distancia mínima para nuevo grupo (2) distancia promedio entre individuos. Construir el dendrograma respectivo.
+```{r}
+dmin = hclust(as.dist(M),method = "single")
+plot(dmin,main = "Dendrograma de distancia mínima")
+```
+
+```{r}
+dave = hclust(as.dist(M),method = "average")
+plot(dave,main = "Dendrograma de distancia promedio")
+```
+
+Podemos ver que en los 2 dendogramas, más que nada queda Sevilla separado de las demas ciudades.
+
+## B. Hacer el gráfico de agromeración no-jerárquica con el método de k-medias para k = 2 y para k = 3 con los datos del problema 5. Argumente porqué sería mejor usar k = 2 o k = 3, según sea su elección. 
+
+
+```{r}
+library(factoextra)
+kmeans_k2 <- kmeans(M, centers = 2)
+fviz_cluster(kmeans_k2, data = M, show.clust.cent = TRUE, ellipse.type="convex", star.plot=FALSE, repel=TRUE,
+             main = "K-medias (k = 2)")
+
+kmeans_k3 <- kmeans(M, centers = 3)
+fviz_cluster(kmeans_k3, data = M, show.clust.cent = TRUE, ellipse.type="convex", star.plot=FALSE, repel=TRUE,
+             main = "K-medias (k = 2)")
+```
+
+Se puede ver que con k = 2, los grupos están mejor distribuidos, ya que agarra a todos los de similares distancias y solo deja a Sevilla fuera, esto es como se veía que debría ser en los dendogramas. Con k = 3, queda separado Barcelona de todos los demás tambien, lo cual no tendría el mayor sentido debido a que está a similar distancia de todas las demás sin incluir Sevilla.

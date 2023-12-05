@@ -1,0 +1,151 @@
+---
+title: "Actividad 1.2 Normalidad univariada"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(nortest)
+library(e1071)
+```
+
+# Pruebas de normalidad variable velocidad:
+
+## Prueba de normalidad univariada Kolmogorov Smirnov en velocidad:
+```{r cars}
+print(lillie.test(cars$speed))
+```
+Debido al alto pvalue de 0.8, con esta prueba rechaza $H_0$, por lo que se concluye que la variable speed tiene una distribución normal, el pvalue tendría que ser menor que 0.1 apróximadamente dependiendo de el alfa establecido, para que la distribución no sea considerada normal, en nuestro caso el nivel de confianza es de 90% por lo que el alfa es 0.1.
+
+## Prueba de normalidad univariada Anderson Darling en velocidad:
+```{r}
+print(ad.test(cars$speed))
+```
+Con la prueba Anderson-Darling se concluye lo mismo que la anterior, la distribución de la variable speed es normal.
+
+# Pruebas de normalidad variable distancia:
+
+## Prueba de normalidad univariada Kolmogorov Smirnov en distancia:
+```{r}
+print(lillie.test(cars$dist))
+```
+Con la variable distancia, en la prueba Smirnov se tiene un pvalue de 0.04 el cual es muy bajo, por lo que no se rechaza $H_0$, y se concluye que la distribución no es normal.
+
+## Prueba de normalidad univariada Anderson Darling en distancia:
+```{r}
+print(ad.test(cars$dist))
+```
+Al igual que en la prueba pasada, el pvalue es muy chico por lo que la distribución no es considerada normal.
+
+# QQPlots
+
+## QQPlot de variable velocidad
+```{r}
+qqnorm(cars$speed)
+qqline(cars$speed)
+```
+En la grafica se ve la distribucion de los datos a traves de los cuartiles, y se ve un plot ideal para la distribucion normal como nos dijeron las pruebas, pero debido a la esquina superior del plot, se ve que tendra alta curtosis ya que se acerca a una distribución con colas delgadas.
+
+### QQPlot de variable distancia
+```{r}
+qqnorm(cars$dist)
+qqline(cars$dist)
+```
+En este qqplot de la distancia, se puede ver una asimetría positiva lo que nos dice que los datos tienen un sesgo a la derecha.
+
+# Coeficientes de sesgo y curtosis variable velocidad:
+
+## Coeficiente de sesgo de la variable de velocidad:
+```{r}
+skewness(cars$speed)
+```
+Debido al coeficiente de sesgo bajo, se puede concluir que la distribución es moderadamente simétrica.
+
+## Coeficiente de curtosis de la variable de velocidad:
+```{r}
+kurtosis(cars$speed)
+```
+El coeficiente de curtosis nos dice que la forma de la forma de la distribución tiene un pico más plano y colas más ligeras, platicúrtica, en la variable de velocidad.
+
+# Coeficientes de sesgo y curtosis variable velocidad:
+
+## Coeficiente de sesgo de la variable de distancia:
+```{r}
+print(skewness(cars$dist))
+```
+En la variable de distancia se puede ver una curtosis mucho más alta de 0.75, esto nos dice que los datos están sesgados a la derecha.
+
+## Coeficiente de curtosis de la variable de distancia:
+```{r}
+print(kurtosis(cars$dist))
+```
+La curtosis en esta variable es muy baja, por lo que se acerca mucho a una forma de distribución mesocúrtica.
+
+## Estadisticas de la velocidad de los carros
+**Media**
+```{r}
+mean(cars$speed)
+```
+**Mediana**
+```{r}
+median(cars$speed)
+```
+**Moda**
+```{r}
+IQR(cars$speed)
+```
+
+## Estadisticas de las distancias de los carros
+**Media**
+```{r}
+mean(cars$dist)
+```
+**Mediana**
+```{r}
+median(cars$dist)
+```
+**Moda**
+```{r}
+IQR(cars$dist)
+```
+
+#Boxplots
+
+## Boxplot variable velocidad
+```{r}
+boxplot(cars$speed)
+```
+Esta es la distribución de los datos de la variable velocidad.
+
+## Boxplot variable distancia
+```{r}
+boxplot(cars$dist)
+```
+Esta es la distribución de los datos de la variable distancia.
+
+# Histogramas
+
+##Histograma variable velocidad
+```{r}
+hist(cars$speed, freq = FALSE,ylim = c(0,.1),xlim=c(0,26))
+lines(density(cars$speed), col = "red")
+curve(dnorm(x, mean = mean(cars$speed), sd = sd(cars$speed)), from = min(cars$speed), to = max(cars$speed), add = TRUE, col = "blue", lwd = 2)
+```
+En el histograma de la variable de velocidad se pueden ver 2 líneas, la azul mostrandonos como se verían los datos si tuvieran una distribución normal, y la roja mostrando la distribución real. En este histograma se puede ver que las 2 líneas son muy parecidas, que demuestra lo que se ha visto desde nuestra prueba principal que es la variable más cercana a la distribución normal.
+
+## Histograma variable distancia
+```{r}
+hist(cars$dist, freq = FALSE)
+lines(density(cars$dist), col = "red")
+curve(dnorm(x, mean = mean(cars$dist), sd = sd(cars$dist)), from = min(cars$dist), to = max(cars$dist), add = TRUE, col = "blue", lwd = 2)
+```
+En este histograma podemos ver el sesgo a la derecha que mencionamos previamente, y que las 2 líneas están mas lejanas en esta variable de distancia que  en la de velocidad. Este histograma nos confirma igual lo de la prueba principal, que la variable está lejana de la distribución normal.
+
+
+## Conclusión 
+Con todas las pruebas, pudimos ver como cada dato y calculo hecho nos llevó a lo mismo, que fue la distribución normal de la variable de velocidad y la distribución no normal de la variable distancia, pudimos ver como la curtosis y sesgo trabajan juntos para solos poder darnos una visualización de como se distribuirán los datos, también en las estadísticas de las variables, se pudo ver una cercanía entre la mediana y moda de la velocidad, cuando se vió una lejanía en la distancia, estos son grandes indicadores y cualquiera puede servir para conseguir información útil sobre los datos, aunque no toda. Aún así se necesitan diferentes pruebas y análisis para poder asegurar lo que se hipotetiza.

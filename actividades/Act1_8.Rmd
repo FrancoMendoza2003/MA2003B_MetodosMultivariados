@@ -1,0 +1,177 @@
+---
+title: "Actividad 1.8 Análisis factorial II"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo=FALSE,warning=FALSE}
+library(psych)
+library(MVN)
+```
+
+# 1. Lea los datos y asegúrese que están límpios.
+```{r}
+M = read.csv("cars93.csv")
+M <- na.omit(M)
+head(M)
+```
+
+# 2. Reduzca la matriz de datos original a otra sólo de variables numéricas.
+```{r}
+M1 = M[ , c(-8,-9)] 
+head(M1)
+```
+
+# 3. Verifique si se cumple que los datos provienen de una población normal multivariada e interprete los resultados.
+
+$H_0:$ Los datos multivariados siguen una distribución normal.
+
+$H_1:$ Los datos multivariados no siguen una distribución normal.
+
+```{r}
+result = mvn(M1, mvnTest = "mardia", alpha = 0.05)
+result$multivariateNormality
+result$univariateNormality
+```
+
+Viendo los resultados de la prueba de normalidad multivariada, concluimos que los datos no siguen una distribución normal multivariada, esto debido a la prueba de mardia en sesgo y curtosis saliendo con un pvalue muy bajo y por debajo del alpha de 0.05, por lo que no podemos rechazar la hipótesis nula.
+
+# 4. Comprueben que hay suficiente correlación entre las variables dos a dos y en su conjunto:  
+
+## a) Correlaciones por pares.
+
+$H_0:$ No hay correlación significativa entre las variables 2 a 2.
+
+$H_1$: Hay correlación significativa entre las variables 2 a 2.
+```{r}
+alpha = 0.01
+as.data.frame(cor(M1))
+```
+
+Podemos ver que hay altas correlaciones en las variables, muchas con correlaciones arriba de 80 y 90%, las únicas que no tienen valores tan altos como los mencionados son las V6 y V7.
+
+```{r}
+corr = corr.test(M1,method = "pearson",alpha = alpha)
+g = as.data.frame(corr$p)
+g
+```
+
+```{r}
+g<0.01
+```
+
+Podemos observar en esta tabla que todos los valores p son menores a nuestro alpha de 0.01, por lo que tenemos que rechazar la hipótesis nula, y por ende concluimos que si hay correlación significativa entre las variables 2 a 2.
+
+## b) Aplique la prueba de Kaiser-Meyer-Olkin  (KMO) para correlaciones y compare el estadístico de prueba resultante con la escala siguiente y concluya.
+
+0.00 a 0.49 inaceptable.
+0.50 a 0.59 miserable.
+0,60 a 0,69 mediocre.
+0.70 a 0.79 medio.
+0,80 a 0,89 meritorio.
+0.90 a 1.00 maravilloso.
+```{r}
+KMO(M1)
+```
+
+Podemos ver acorde a los resultados que nos dió la prueba KMO, que los primeras 4 variables tienen resultados meritorios acorde a la escala para sis correlaciones, las variables 5 y 6 nos dieron resultados medios, y por último la variable 7 nos dió nos dió un resultado mediocre. Esto nos dice que las primeras 4 tienen una alta relación entre ellas, mientras que las siguientes van bajando.
+
+También nos dieron el resultado general MSA de 0.81 donde nos dice que el análisis factorial explica el 81% de la varianza de los datos.
+
+# 6. Realicen un análisis de componentes principales y describan la proporción de varianza total explicada por cada componente. 
+```{r}
+summary(prcomp(M1, scale = TRUE))
+```
+
+En este análisis de componentes principales podemos observar que el componente 1 ya explica el 71% de la varianza total, el componente 2 aumentando a la varianza total un 12%, la variable 3 un 10%, por lo que estas 3 componentes ya nos explican el 94.35%, las siguientes 4 nos explican menos de 2% cada una.
+
+# 7. Con la ayuda del gráfico Scree y la tabla de distribución de la proporción acumulada de la varianza del punto anterior, decidan cuántos compontes son recomendables en este caso y que expliquen una mayoría de la varianza. 
+
+```{r}
+scree(cor(M1))
+```
+
+Viendo el gráfico scree, podemos ver que el codo de la gráfica se hace en el componente 3, por lo que eligiremos usar 3 componentes.
+
+# 8. Realizar un análisis factorial según el método de máxima verosimilitud o componentes principales que convenga, así como dos modelos de rotación.
+
+```{r}
+factanal=fa(r = cor(M1), nfactors = 3, fm = "ml")
+summary(factanal)
+```
+
+```{r}
+quarti=fa(cor(M1), nfactors =3, rotate = "quartimax", fm ="ml")
+summary(quarti)
+quarti
+```
+
+```{r}
+vari=fa(cor(M1), nfactors =3, rotate = "varimax", fm ="ml")
+summary(vari)
+```
+
+En todos los casos, el análisis sugiere que el modelo con 3 factores es adecuado. Esto se determina por la prueba de hipótesis de que tres factores son suficientes, junto con medidas de ajuste como la función objetivo, el RMSA (root mean square of the residuals) y el RMSA corregido. Los valores bajos en estos errores nos indican que hubo un buen ajuste.
+
+La tabla de correlaciones entre factores muestra cómo están relacionados entre sí los factores extraídos. Los valores en esta tabla representan las correlaciones entre los factores. En el resultado, se observa que, por ejemplo, el factor ML1 tiene una correlación negativa moderada con ML3 y ML2, y así sucesivamente para los otros factores.
+
+Ambos modelos de rotación (quartimax y varimax) muestran resultados similares en términos de la adecuación del modelo y la estructura de correlación entre factores. Esto sugiere que la estructura subyacente de los factores no cambia significativamente con la rotación. La diferencia principal entre estos modelos suele encontrarse en la interpretación de las cargas factoriales, pero en este caso, los resultados no parecen variar mucho entre las rotaciones.
+
+# 9. Escriban las composiciónes lineales de las variables en función de los factores, según su análisis. Interprete factores e identifique variables que más influyen.
+
+Usaremos el modelo varimax.
+```{r, echo=FALSE}
+a = loadings(vari)
+cat("\nCombinaciones lineales\n")
+
+for (i in 1:3) {
+  cat("\nFactor", i, "= ")
+  for (j in 1:7) {
+    cat(a[j*i], paste0("* V", j))
+    if (j!=7) {
+      cat(" + ")
+    }
+  }
+  cat("\n")
+}
+
+```
+
+### Composiciones lineales de las variables en función de los factores:
+
+**Factor 1:**
+- Variables que más influyen positivamente: V3, V5, V4, V2
+- Variables que más influyen negativamente: V1, V6, V7
+
+**Factor 2:**
+- Variables que más influyen positivamente: V1, V4, V7, V2
+- Variables que más influyen negativamente: V3, V5, V6
+
+**Factor 3:**
+- Variables que más influyen positivamente: V1, V6, V7, V3
+- Variables que más influyen negativamente: V4, V2, V5
+
+### Interpretación de los factores:
+
+- **Factor 1:** Está influenciado positivamente por variables como V3 (más fuerte), V5, V4 y V2, mientras que V1, V6 y V7 tienen una influencia negativa más fuerte en este factor.
+  
+- **Factor 2:** Se ve positivamente influenciado por variables como V1 (más fuerte), V4, V7 y V2, mientras que V3, V5 y V6 tienen una influencia negativa más fuerte en este factor.
+  
+- **Factor 3:** Muestra una fuerte influencia positiva de variables como V1 (más fuerte), V6, V7 y V3, mientras que V4, V2 y V5 tienen una influencia negativa más fuerte en este factor.
+
+# 10. ¿Qué difierencias esenciales encuentran entre Componentes principales y Análisis factorial?
+
+- **Componentes Principales:**
+  - Método estadístico para reducir la dimensionalidad de los datos, busca maximizar la varianza de las variables originales.
+  - No considera relaciones entre variables, busca nuevos ejes que representen la mayor variabilidad de los datos.
+  - No asume estructura de factores latentes o subyacentes.
+
+- **Análisis Factorial:**
+  - Se enfoca en identificar factores latentes que expliquen las relaciones entre las variables observadas.
+  - Busca comprender la estructura subyacente de los datos, identificando factores comunes que explican las correlaciones entre variables.
+  - Ofrece cargas factoriales que indican cómo cada variable está relacionada con los factores identificados.

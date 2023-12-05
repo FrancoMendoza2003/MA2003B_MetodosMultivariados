@@ -1,0 +1,216 @@
+---
+title: "Actividad 2.4 Detección de datos influyentes"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE}
+library(car)
+library(lmtest)
+```
+
+
+```{r}
+df= read.csv(file = "datosRes.csv")
+head(df,3)
+```
+
+```{r}
+model = lm(df$Resistencia~.,df)
+```
+
+# 1. Selección de variables por pasos
+
+### AIC:
+```{r}
+step(model,direction = "both",trace=1)
+```
+
+### BIC:
+```{r}
+step(model,direction="both",trace=1,k=log(nrow(df)))
+```
+
+Según la evaluación del modelo AIC y BIC, nos quedaremos con las variables con estas evaluaciones más altas, y con el modelo que nos dan al final de la evaluación, "Longitud", "Altura.matriz" y "Altura.amarre".
+
+# 2. Datos atípicos:
+
+### Identifica datos atípicos mediante el criterio de desviación estándar.
+
+```{r}
+model = lm(formula = df$Resistencia ~ Longitud + Altura.matriz + Altura.amarre, 
+    data = df)
+```
+
+```{r}
+resuduals = rstandard(model)
+resuduals
+```
+
+### Identifica datos atípicos mediante el criterio de estandarización extrema.
+```{r}
+rstud = rstudent(model)
+rstud
+```
+
+Usamos los métodos de rstandard y de rstudent para encontrar datos atípicos dentro del dataset.
+
+# 3. Datos Inflyentes
+
+### Por grado de Levarage
+```{r}
+hatt = hatvalues(model)
+hatt
+```
+
+### Por distancia de Cook
+```{r}
+cooks = cooks.distance(model)
+cooks
+```
+
+Para identificar los datos influyentes en el dataset, usamos los métodos por distancia de Cook, y por grado de Leverage. Estos datos que sobresalen son los que cambian más al modelo.
+
+# 4. Resumen de resultados
+```{r}
+tabla = data.frame(residuals(model),resuduals,rstud,hatt,cooks)
+head(tabla,5)
+```
+
+# 5. Gráficos complementarios
+
+## Variable dependiente contra las variables predictoras
+```{r}
+avPlots(model,main = paste("Variable dependiente contra las variables predictoras"),ylab = "Resistencia")
+```
+
+Aquí podemos ver el modelo de Resistencia en función de cada variable independiente, y se puede ver qué observaciones son influyentes en el modelo de cada variable. 
+
+## Residuos estandarizados absolutos e identifica aquellos cuyo valor absoluto es mayor a 3.
+```{r}
+plot(abs(tabla$resuduals),type = "h",main = "Residuos estandarizados absolutos")
+mayor3 = which(abs(tabla$resuduals)>3)
+mayor3
+```
+
+Encontramos ningún valor con valor absoluto mayor a 3 en los residuos estandarizados, podemos ver que los más altos llegan solo aproximadamente a 2.
+
+## Gráfico de influencia:
+```{r}
+influencePlot(model,id=TRUE)
+```
+
+Aquí encontramos los datos influyentes del dataset para el modelo, en este caso son las observaciones 9, 15, 17, y 18.
+
+# 6. Ajustes al modelo
+```{r}
+df2 = df[-c(9,15,17,18),]
+model2 = lm(formula = df2$Resistencia ~ Longitud + Altura.matriz + Altura.amarre, 
+    data = df2)
+summary(model2)
+```
+
+```{r}
+summary(model)
+```
+
+
+## Variabilidad explicada por el modelo/P valor significancia del modelo
+
+$H_0:$ Todos los coeficientes de regresión son cero.
+
+$H_1:$ No todos los coeficientes de  regresión son cero.
+
+
+Hacemos un nuevo modelo quitando primero las observaciones previamente mencionadas que eran influyentes en el modelo previo. Al comparar las 2 r^2, podemos ver que el modelo 2 mejora los resultados, aunque solo por poco debido a los valores de r^2 que ya teníamos previamente. El nuevo valor ajustado es de 0.9911, cuando el previo era de 0.9881. También podemos ver que en el nuevo modelo la significancia de la variable Altura.matriz aumenta, mientras que la de Altura.amarre baja, esto puede ser debido a que los datos influyentes afectaban más a esta variable.
+
+
+En general podemos cocnluir que la significancia del modelo es muy alta debido a que las variables ecplican el 99% de la variabilidad de la Resistencia. Y con el p value tan bajo <2.2e-16, se tiene suficiente evidencia para rechasar la hipótesis nula de que todos los coeficientes de regresión son iguales a cero, y podemos llegar a que el modelo si explica la variabilidad en la variable dependiente.
+
+## Supuestos del modelo
+
+### Normalidad de los residuos
+
+$H_0:$ Los residuos provienen de una distribución normal.
+
+$H_1:$ Los residuos no provienen de una distribución normal.
+
+```{r}
+shapiro.test(residuals(model2))
+```
+
+```{r}
+qqnorm(model2$residuals,main = "Q-Q Plot",xlab = "Cuantiles Teóricos",ylab= "Cuántiles de los datos")
+qqline(model2$residuals)
+```
+
+```{r}
+hist(model$residuals,main = "Histograma de los residuos del modelo",xlab = "Residuos",ylab = "Frecuencia",col = c("red","purple","blue","orange","green"))
+```
+
+Viendo que el pvalue de la prueba de Shapiro es de 0.7256, y siendo mayor que el $\alpha$ de 0.05, no podemos rechazar la hipótesis nula, y se concluye que se presenta una distribución normal en los resiudos del modelo.
+
+### Verificación de media cero
+
+$H_0:$ Media $= 0$.
+
+$H_1:$ Media $\neq 0$.
+
+```{r}
+t.test(residuals(model2))
+```
+
+Debido a el pvalue de 1, no podemos rechazar la hipótesis nula, y concluimos que la media de los residuos si puede ser igual a 0.
+
+### Homocedasticidad
+
+$H_0:$ La varianza de los errores es constante.
+
+$H_1:$ La varianza de los errores no es constante.
+
+```{r}
+bptest(model2)
+```
+
+```{r}
+plot(residuals(model2),main = "Residuos del modelo", xlab = "Observación",ylab= "Residuos")
+abline(h=0,col="red",lwd=2)
+```
+
+Debido a que el pvalue es muy alto, con un valor de 0.964, no se puede rechazar la hipótesis nula, y se concluye que la varianza de los errores es constante, esto se puede ver en la gráfica superior.
+
+### Independencia
+
+$H_0:$ Los residuos son independientes.
+
+$H_1:$ Los residuos no son independientes.
+
+```{r}
+dwtest(model2)
+```
+
+Debido a que el p value es alto, con un valor de 0.008, y menor que 0.05, hay suficiente evidencia para rechazar la hipótesis nula, por lo que se concluye que los residuos no son independientes.
+
+## AIC:
+```{r}
+step(model2,direction="both",  trace=1)
+```
+
+## BIC:
+```{r}
+step(model2,direction="both",trace=1,k=log(nrow(df2)))
+```
+
+Podemos ver que en las pruebas AIC y BIC se tienen las mismas variables, y no se retira ninguna del modelo.
+
+# 7. Conclusiones
+
+En esta actividad pudimos identificar datos atípicos e influyentes con diferentes métodos válidos en modelos de regresión de múltiples variables, y vimos como estos métodos eran diferentes y parecidos entre sí. Esto se hizo para observar cómo afectan a los modelos, al igual que ver cómo cambian estos modelos al retirar los datos influyentes, para ver como mejora el modelo sin estos datos.
+
+
+También hicimos una selección de variables con el criterio de evaluación de modelo AIC y BIC, para encontrar las variables óptimas para el modelo que se buscaba crear.

@@ -1,0 +1,138 @@
+---
+title: "Actividad 1.1 Matrices y Estadística"
+author: "Franco Mendoza Muraira A01383399"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problema 1
+
+```{r}
+A = matrix(c(2,4,-3,0,-2,5,9,0,6),nrow=3,ncol=3,byrow=TRUE)
+B= matrix(c(8,6,-2,-7,9,-5,-3,5,1),nrow=3,ncol = 3,byrow=TRUE)
+```
+
+
+##### Matriz A:
+```{r}
+A
+```
+
+##### Matriz B:
+```{r}
+B
+```
+### Operaciones con las matrices
+
+```{r}
+# A+B =
+A+B
+# 4A+3B= 
+4*A+3*B
+# A' =
+t(A)
+# A^-1
+solve(A)
+# Determinante de A:
+det(A)
+# Determinante de la transpuesta de A: 
+det(t(A))
+```
+
+# Problema 2
+```{r}
+A = matrix(c(2,1,3,-3,3,0,-2,-1,4,5,0,-5),nrow=3,ncol=4,byrow = TRUE)
+B= matrix(c(4,-3,5,8,2,1,-2,0),nrow=4,ncol=2)
+```
+
+##### Matriz A:
+```{r}
+A
+```
+
+##### Matriz B:
+```{r}
+B
+```
+
+### Operaciones con las matrices
+```{r}
+# A*B
+A%*%B
+```
+
+# Problema 3
+```{r}
+df=read.csv(file="mcdonaldsmenu.csv")
+cuant_df = df[,c("Calories","Protein","Carbohydrates","Sugars")]
+```
+
+#### **Vector de medias**
+
+##### Vector de medias usando funcion colMeans de R:
+```{r}
+colMeans(cuant_df)
+```
+
+
+
+##### Vector de medias usando formula matriz de medias:
+```{r}
+ones = rep(1,nrow(cuant_df))
+print(t(cuant_df)%*%ones*1/nrow(cuant_df))
+```
+
+Se puede ver que los 2 vectores son iguales.
+#### **Matriz de Varianzas y Covarianzas**
+
+##### Varianza y Covarianza usando funcion cov de R: 
+
+```{r}
+print(cov(cuant_df))
+```
+
+##### Varianza y Covarianza con formula matriz varianza covarianza:
+
+```{r}
+mean_df = as.matrix(sweep(cuant_df,2,colMeans(cuant_df)))
+print( 1/nrow(cuant_df)*(t(mean_df)%*%(mean_df)))
+```
+
+Se ve que las 2 matrices son diferentes, esto debido a la manera que son calculadas, pero los numeros de ambas matrices siguen siendo parecidos.
+
+#### **Matriz de Correlacion**
+
+##### Matriz de correlacion con funcion cor de R:
+
+```{r}
+covar= diag(cov(cuant_df))
+cor(cuant_df)
+```
+
+##### Matriz de correlacion con formula matriz de correlacion:
+```{r}
+print(solve(sqrt(diag(covar)))%*%cov(cuant_df)%*%solve(sqrt(diag(covar))))
+```
+
+Se puede ver que las matrices son iguales siendo calculadas asi.
+#### **Valores y vectores propios de la matriz de covarianzas y de la de correlación.**
+
+##### Valores y vectores propios de la matriz de covarianzas:
+```{r}
+eigen(var(cuant_df))
+```
+
+##### Valores y vectores propios de la matriz de correlacion:
+```{r}
+eigen(cor(cuant_df))
+```
+
+`
+
